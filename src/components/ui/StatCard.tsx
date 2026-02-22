@@ -21,7 +21,7 @@ const colorMap = {
 
 export function StatCard({ icon: Icon, iconColor, title, value, subtitle, trend, trendDirection }: StatCardProps) {
   const c = colorMap[iconColor];
-  const trendUp = trendDirection === 'up' ?? (trend !== undefined && trend >= 0);
+  const trendUp = trendDirection ? trendDirection === 'up' : (trend !== undefined && trend >= 0);
   return (
     <div className="bg-white rounded-xl p-5 border border-[var(--border-light)] shadow-[var(--shadow-card)] hover:bg-[var(--bg-card-hover)] transition-colors">
       <div className="flex items-start justify-between">
