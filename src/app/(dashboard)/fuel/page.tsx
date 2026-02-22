@@ -83,16 +83,6 @@ export default function FuelPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Vehicle *</label>
-              <select value={form.vehicleId || ''} onChange={f('vehicleId')}>
-                <option value="">Select Vehicle</option>
-                {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber} — {v.make}</option>)}
-              </select>
-            </div>
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Fuel Entry" size="lg">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Vehicle *</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')} className="border border-[var(--border-default)] rounded-lg">
                 <option value="">Select Vehicle</option>
                 {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber} — {v.make}</option>)}
