@@ -84,7 +84,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f0' }} />
               <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f0' }} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v} trips`, 'Trips']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [`${value}`, name]} />
               <Bar dataKey="trips" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -96,7 +96,7 @@ export default function DashboardPage() {
               <Pie data={vehicleStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
                 {vehicleStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => [v, name]} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [`${value}`, name]} />
               <Legend layout="horizontal" align="center" wrapperStyle={{ fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
