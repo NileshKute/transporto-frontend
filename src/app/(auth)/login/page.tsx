@@ -21,7 +21,11 @@ export default function LoginPage() {
       toast.success('Welcome back!');
       router.replace('/dashboard');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Invalid email or password');
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Something went wrong. Please try again.';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
