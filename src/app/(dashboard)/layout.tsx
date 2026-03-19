@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
-  LogOut, Bell, Search, Menu, X, ChevronRight
+  LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText
 } from 'lucide-react';
 
 const navGroups = [
@@ -30,6 +30,13 @@ const navGroups = [
     ]
   },
   {
+    label: 'BILLING',
+    items: [
+      { href: '/clients', icon: Building2, label: 'Clients' },
+      { href: '/invoices', icon: FileText, label: 'Invoices' },
+    ]
+  },
+  {
     label: 'SYSTEM',
     items: [
       { href: '/shifts', icon: Clock, label: 'Shifts' },
@@ -39,6 +46,13 @@ const navGroups = [
 ];
 
 function getPageTitle(pathname: string) {
+  if (pathname.startsWith('/clients')) return pathname === '/clients' ? 'Clients' : 'Client';
+  if (pathname.startsWith('/invoices')) {
+    if (pathname === '/invoices') return 'Invoices';
+    if (pathname === '/invoices/create') return 'Create Invoice';
+    if (pathname.endsWith('/edit')) return 'Edit Invoice';
+    return 'Invoice';
+  }
   const map: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/vehicles': 'Vehicles',

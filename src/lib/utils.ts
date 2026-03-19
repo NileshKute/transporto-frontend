@@ -3,6 +3,16 @@ export const formatCurrency = (amount: number | null | undefined): string => {
   return '₹' + amount.toLocaleString('en-IN');
 };
 
+/** Indian number format for invoice amounts: ₹3,07,838 */
+export function formatIndianCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '₹0';
+  const formatted = Number(amount).toLocaleString('en-IN', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
+  return `₹${formatted}`;
+}
+
 export const formatNumber = (num: number | null | undefined): string => {
   if (num == null) return '0';
   return num.toLocaleString('en-IN');
