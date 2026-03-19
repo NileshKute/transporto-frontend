@@ -132,7 +132,7 @@ export default function ClientsPage() {
         {isLoading ? (
           <LoadingSpinner />
         ) : !clients.length ? (
-          <EmptyState message="No clients" description="Add your first client to get started" />
+          <EmptyState message="No clients" description="Add your first client to get started" action={{ label: 'Add Client', onClick: openCreate }} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -179,6 +179,11 @@ export default function ClientsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {!isLoading && clients.length > 0 && (
+          <div className="px-4 py-2 border-t border-[#E0E8F0] font-['Rajdhani'] text-xs text-[#7A9AB8]">
+            Showing 1–{clients.length} of {clients.length}
           </div>
         )}
       </div>

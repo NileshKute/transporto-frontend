@@ -15,9 +15,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { background: '#111827', color: '#f1f5f9', border: '1px solid #1e293b' },
-            success: { iconTheme: { primary: '#10b981', secondary: '#111827' } },
-            error: { iconTheme: { primary: '#ef4444', secondary: '#111827' } },
+            style: { background: '#0D2847', color: '#fff', border: '1px solid #1A4A7A' },
+            success: { style: { background: '#16A34A' }, iconTheme: { primary: '#fff', secondary: '#16A34A' } },
+            error: { style: { background: '#DC2626' }, iconTheme: { primary: '#fff', secondary: '#DC2626' } },
+            loading: { style: { background: '#42A5F5' }, iconTheme: { primary: '#fff', secondary: '#42A5F5' } },
+            custom: { style: { background: '#F59E0B' }, iconTheme: { primary: '#fff', secondary: '#F59E0B' } },
           }}
         />
       </AuthProvider>

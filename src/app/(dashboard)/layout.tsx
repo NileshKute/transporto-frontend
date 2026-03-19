@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
@@ -96,6 +97,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const pageTitle = getPageTitle(pathname);
 
+  const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
+    const items: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard' }];
+    if (pathname === '/dashboard') return items;
+    if (pathname.startsWith('/clients')) {
+      items.push({ label: 'Clients', href: '/clients' });
+      if (pathname !== '/clients') items.push({ label: pathname.includes('/edit') ? 'Edit' : 'Detail' });
+      return items;
+    }
+    if (pathname.startsWith('/invoices')) {
+      items.push({ label: 'Invoices', href: '/invoices' });
+      if (pathname === '/invoices/create') items.push({ label: 'Create' });
+      else if (pathname.endsWith('/edit')) items.push({ label: 'Edit' });
+      else if (pathname !== '/invoices') items.push({ label: 'Detail' });
+      return items;
+    }
+    if (pathname.startsWith('/vehicles')) {
+      items.push({ label: 'Vehicles', href: '/vehicles' });
+      if (pathname !== '/vehicles') items.push({ label: 'Detail' });
+      return items;
+    }
+    if (pathname.startsWith('/drivers')) {
+      items.push({ label: 'Drivers', href: '/drivers' });
+      if (pathname !== '/drivers') items.push({ label: 'Detail' });
+      return items;
+    }
+    if (pathname.startsWith('/trips')) { items.push({ label: 'Trips', href: '/trips' }); return items; }
+    if (pathname.startsWith('/fuel')) { items.push({ label: 'Fuel', href: '/fuel' }); return items; }
+    if (pathname.startsWith('/maintenance')) { items.push({ label: 'Maintenance', href: '/maintenance' }); return items; }
+    if (pathname.startsWith('/emergencies')) { items.push({ label: 'Emergencies', href: '/emergencies' }); return items; }
+    if (pathname.startsWith('/insurance')) { items.push({ label: 'Insurance', href: '/insurance' }); return items; }
+    if (pathname.startsWith('/cold-storage')) { items.push({ label: 'Cold Storage', href: '/cold-storage' }); return items; }
+    if (pathname.startsWith('/shifts')) { items.push({ label: 'Shifts', href: '/shifts' }); return items; }
+    if (pathname.startsWith('/whatsapp')) { items.push({ label: 'WhatsApp', href: '/whatsapp' }); return items; }
+    items.push({ label: pageTitle });
+    return items;
+  }, [pathname, pageTitle]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#F4F6F8]">
       {sidebarOpen && (
@@ -183,10 +221,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
               <div>
                 <h1 className="font-['Oswald'] text-xl font-bold text-white tracking-wide uppercase">{pageTitle}</h1>
-                <div className="flex items-center gap-1 text-xs text-[#64B5F6] font-['Rajdhani']">
-                  <span>Dashboard</span>
-                  <ChevronRight size={12} />
-                  <span>{pageTitle}</span>
+                <div className="flex items-center gap-1 text-xs text-[#64B5F6] font-['Rajdhani'] mt-0.5">
+                  <Breadcrumbs items={breadcrumbItems} variant="dark" />
                 </div>
               </div>
             </div>
@@ -207,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="h-[3px] w-full bg-gradient-to-r from-[#1565C0] to-[#42A5F5]" />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-[#F4F6F8]">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-[#F4F6F8] page-enter">
           {children}
         </main>
       </div>

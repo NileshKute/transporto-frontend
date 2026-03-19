@@ -233,7 +233,11 @@ export default function InvoicesPage() {
         {isLoading ? (
           <LoadingSpinner />
         ) : !filtered.length ? (
-          <EmptyState message="No invoices" description="Create an invoice or use Auto Generate" />
+          <EmptyState
+            message="No invoices"
+            description="Create an invoice or use Auto Generate"
+            action={{ label: 'Create Invoice', onClick: () => window.location.href = '/invoices/create' }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -290,6 +294,11 @@ export default function InvoicesPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!isLoading && filtered.length > 0 && (
+          <div className="px-4 py-2 border-t border-[#E0E8F0] font-['Rajdhani'] text-xs text-[#7A9AB8]">
+            Showing 1–{filtered.length} of {filtered.length}
           </div>
         )}
       </div>
