@@ -44,13 +44,13 @@ interface DriverSummary {
 
 // --- Message type badges (color-coded) ---
 const MESSAGE_TYPE_BADGES: Record<string, { label: string; className: string; icon: typeof MessageCircle }> = {
-  TRIP_START:  { label: 'Trip Start',  className: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: Route },
-  TRIP_END:    { label: 'Trip End',    className: 'bg-blue-100 text-blue-800 border-blue-200', icon: Route },
-  TRIP:        { label: 'Trip',        className: 'bg-blue-100 text-blue-800 border-blue-200', icon: Route },
-  FUEL:        { label: 'Fuel',        className: 'bg-amber-100 text-amber-800 border-amber-200', icon: Fuel },
-  EMERGENCY:   { label: 'Emergency',   className: 'bg-red-100 text-red-800 border-red-200', icon: AlertTriangle },
-  LOCATION:    { label: 'Location',    className: 'bg-violet-100 text-violet-800 border-violet-200', icon: MapPin },
-  GENERAL:     { label: 'General',     className: 'bg-slate-100 text-slate-700 border-slate-200', icon: MessageCircle },
+  TRIP_START:  { label: 'Trip Start',  className: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/30', icon: Route },
+  TRIP_END:    { label: 'Trip End',    className: 'bg-[#1565C0]/10 text-[#1565C0] border-[#1565C0]/30', icon: Route },
+  TRIP:        { label: 'Trip',        className: 'bg-[#1565C0]/10 text-[#1565C0] border-[#1565C0]/30', icon: Route },
+  FUEL:        { label: 'Fuel',        className: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30', icon: Fuel },
+  EMERGENCY:   { label: 'Emergency',   className: 'bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/30', icon: AlertTriangle },
+  LOCATION:    { label: 'Location',    className: 'bg-[#42A5F5]/10 text-[#1A4A7A] border-[#42A5F5]/30', icon: MapPin },
+  GENERAL:     { label: 'General',     className: 'bg-[#7A9AB8]/10 text-[#1A4A7A] border-[#E0E8F0]', icon: MessageCircle },
 };
 
 function getTypeBadge(parsedType: ParsedType | null | undefined) {
@@ -197,41 +197,41 @@ export default function WhatsAppPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">WhatsApp</h2>
-        <p className="text-sm text-slate-500">Parsed incoming messages from drivers</p>
+        <h2 className="text-2xl font-bold text-[#0D2847]">WhatsApp</h2>
+        <p className="text-sm text-[#7A9AB8]">Parsed incoming messages from drivers</p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Messages today</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalToday}</p>
+        <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4">
+          <p className="text-xs font-medium text-[#7A9AB8] uppercase tracking-wide">Messages today</p>
+          <p className="text-2xl font-bold text-[#0D2847] mt-1">{stats.totalToday}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Parsed %</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.parsedPct}%</p>
+        <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4">
+          <p className="text-xs font-medium text-[#7A9AB8] uppercase tracking-wide">Parsed %</p>
+          <p className="text-2xl font-bold text-[#0D2847] mt-1">{stats.parsedPct}%</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pending review</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.pendingReview}</p>
+        <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4">
+          <p className="text-xs font-medium text-[#7A9AB8] uppercase tracking-wide">Pending review</p>
+          <p className="text-2xl font-bold text-[#0D2847] mt-1">{stats.pendingReview}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Active drivers</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.activeDrivers}</p>
+        <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4">
+          <p className="text-xs font-medium text-[#7A9AB8] uppercase tracking-wide">Active drivers</p>
+          <p className="text-2xl font-bold text-[#0D2847] mt-1">{stats.activeDrivers}</p>
         </div>
       </div>
 
       <div className="flex gap-4 flex-col lg:flex-row">
         {/* Left: driver list + filters + message list */}
         <div className="flex-1 min-w-0 space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap gap-3">
+          <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4 flex flex-wrap gap-3">
             <select
               value={filterType}
               onChange={(e) => {
                 setFilterType(e.target.value);
                 setPage(1);
               }}
-              className="h-10 w-40 rounded-lg border border-slate-300 text-sm text-slate-700"
+              className="h-10 w-40 rounded-lg border border-[#E0E8F0] text-sm text-[#0D2847]"
             >
               <option value="">All Types</option>
               {['fuel', 'emergency', 'trip', 'general'].map((t) => (
@@ -244,7 +244,7 @@ export default function WhatsAppPage() {
                 setFilterStatus(e.target.value);
                 setPage(1);
               }}
-              className="h-10 w-40 rounded-lg border border-slate-300 text-sm text-slate-700"
+              className="h-10 w-40 rounded-lg border border-[#E0E8F0] text-sm text-[#0D2847]"
             >
               <option value="">All Statuses</option>
               {['RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED', 'IGNORED'].map((s) => (
@@ -256,29 +256,29 @@ export default function WhatsAppPage() {
           </div>
 
           {/* Driver list (sidebar on left when not selected, or above list) */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-2 border-b border-slate-200 bg-slate-50">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Drivers</p>
+          <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm overflow-hidden">
+            <div className="px-4 py-2 border-b border-[#E0E8F0] bg-[#F4F6F8]">
+              <p className="text-xs font-semibold text-[#1A4A7A] uppercase tracking-wide font-['Barlow_Condensed']">Drivers</p>
             </div>
             <div className="max-h-48 overflow-y-auto">
               {driversList.length === 0 && !fullLoading && (
-                <p className="p-4 text-sm text-slate-500">No drivers yet</p>
+                <p className="p-4 text-sm text-[#7A9AB8]">No drivers yet</p>
               )}
               {driversList.map((d) => (
                 <button
                   key={d.id}
                   type="button"
                   onClick={() => setSelectedDriver(d)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                    selectedDriver?.id === d.id ? 'bg-primary-50 border-l-4 border-l-primary-500' : ''
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-[#E0E8F0] last:border-0 hover:bg-[#F4F6F8] transition-colors ${
+                    selectedDriver?.id === d.id ? 'bg-[#1565C0]/10 border-l-4 border-l-[#42A5F5]' : ''
                   }`}
                 >
-                  <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-slate-600" />
+                  <div className="w-9 h-9 rounded-full bg-[#E0E8F0] flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-[#1A4A7A]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900 truncate">{d.name}</p>
-                    <p className="text-xs text-slate-500 font-mono truncate">{d.phone}</p>
+                    <p className="font-medium text-[#0D2847] truncate">{d.name}</p>
+                    <p className="text-xs text-[#7A9AB8] font-mono truncate">{d.phone}</p>
                   </div>
                 </button>
               ))}
@@ -301,7 +301,7 @@ export default function WhatsAppPage() {
                 return (
                   <div
                     key={msg.id}
-                    className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-colors"
+                    className="bg-white rounded-xl border border-[#E0E8F0] p-5 shadow-sm hover:shadow-md transition-colors"
                   >
                     <div className="flex items-start gap-4">
                       <div className={`p-2.5 rounded-xl flex-shrink-0 ${badge.className}`}>
@@ -310,10 +310,10 @@ export default function WhatsAppPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-slate-900 text-sm">
+                            <span className="font-semibold text-[#0D2847] text-sm">
                               {msg.driver?.name || 'Unknown Driver'}
                             </span>
-                            <span className="font-mono text-xs text-slate-500">{msg.fromPhone}</span>
+                            <span className="font-mono text-xs text-[#7A9AB8]">{msg.fromPhone}</span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded font-medium border ${badge.className}`}
                             >
@@ -322,13 +322,13 @@ export default function WhatsAppPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             {msg.status && <StatusBadge status={msg.status} />}
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-[#7A9AB8]">
                               {formatDateTime(msg.receivedAt)}
                             </span>
                           </div>
                         </div>
 
-                        <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3 font-mono">
+                        <p className="text-sm text-[#0D2847] bg-[#F4F6F8] border border-[#E0E8F0] rounded-lg p-3 mb-3 font-mono">
                           &quot;{msg.message}&quot;
                         </p>
 
@@ -339,12 +339,12 @@ export default function WhatsAppPage() {
                               .map(([k, v]) => (
                                 <div
                                   key={k}
-                                  className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700"
+                                  className="bg-[#F4F6F8] border border-[#E0E8F0] rounded-lg px-3 py-1.5 text-sm text-[#0D2847]"
                                 >
-                                  <p className="text-xs text-slate-500 capitalize">
+                                  <p className="text-xs text-[#7A9AB8] capitalize">
                                     {k.replace(/([A-Z])/g, ' $1')}
                                   </p>
-                                  <p className="text-sm font-semibold text-slate-900">
+                                  <p className="text-sm font-semibold text-[#0D2847]">
                                     {String(v)}
                                   </p>
                                 </div>
@@ -354,8 +354,8 @@ export default function WhatsAppPage() {
 
                         {msg.confidence != null && (
                           <div className="flex items-center gap-3 mt-2">
-                            <span className="text-xs text-slate-500">Confidence:</span>
-                            <div className="flex-1 max-w-[120px] h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <span className="text-xs text-[#7A9AB8]">Confidence:</span>
+                            <div className="flex-1 max-w-[120px] h-1.5 bg-[#E0E8F0] rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
                                   msg.confidence >= 0.8
@@ -401,20 +401,20 @@ export default function WhatsAppPage() {
         {/* Right: Chat panel when driver selected */}
         <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col">
           {selectedDriver ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[520px]">
-              <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                  <User className="w-5 h-5 text-slate-600" />
+            <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm flex flex-col h-[520px]">
+              <div className="px-4 py-3 border-b border-[#E0E8F0] bg-[#F4F6F8] flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#E0E8F0] flex items-center justify-center">
+                  <User className="w-5 h-5 text-[#1A4A7A]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-900">{selectedDriver.name}</p>
-                  <p className="text-xs text-slate-500 font-mono">{selectedDriver.phone}</p>
+                  <p className="font-semibold text-[#0D2847]">{selectedDriver.name}</p>
+                  <p className="text-xs text-[#7A9AB8] font-mono">{selectedDriver.phone}</p>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#e5ddd5]">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F4F6F8]">
                 {conversationMessages.length === 0 && (
-                  <p className="text-center text-slate-500 text-sm py-8">No messages yet. Send one below.</p>
+                  <p className="text-center text-[#7A9AB8] text-sm py-8">No messages yet. Send one below.</p>
                 )}
                 {conversationMessages.map((msg) => {
                   const isOut = msg.direction === 'outbound';
@@ -426,12 +426,12 @@ export default function WhatsAppPage() {
                       <div
                         className={`max-w-[85%] rounded-lg px-3 py-2 shadow-sm ${
                           isOut
-                            ? 'bg-[#d9fdd3] text-slate-900'
-                            : 'bg-white text-slate-900 border border-slate-200'
+                            ? 'bg-[#1565C0] text-white'
+                            : 'bg-white text-[#0D2847] border border-[#E0E8F0]'
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.body}</p>
-                        <p className={`text-[10px] mt-1 ${isOut ? 'text-slate-500' : 'text-slate-400'}`}>
+                        <p className={`text-[10px] mt-1 ${isOut ? 'text-[#7A9AB8]' : 'text-[#7A9AB8]'}`}>
                           {formatTime(msg.receivedAt || msg.sentAt)}
                         </p>
                       </div>
@@ -440,7 +440,7 @@ export default function WhatsAppPage() {
                 })}
               </div>
 
-              <div className="p-3 border-t border-slate-200 bg-white rounded-b-xl">
+              <div className="p-3 border-t border-[#E0E8F0] bg-white rounded-b-xl">
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -448,14 +448,14 @@ export default function WhatsAppPage() {
                     onChange={(e) => setSendText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                     placeholder="Type a message..."
-                    className="flex-1 min-w-0 rounded-lg border border-slate-300 text-sm py-2.5 px-3"
+                    className="flex-1 min-w-0 rounded-lg border border-[#E0E8F0] text-sm py-2.5 px-3"
                     disabled={sending}
                   />
                   <button
                     type="button"
                     onClick={sendMessage}
                     disabled={!sendText.trim() || sending}
-                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary-600 text-white flex items-center justify-center hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#1565C0] text-white flex items-center justify-center hover:bg-[#0D2847] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -463,10 +463,10 @@ export default function WhatsAppPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 flex flex-col items-center justify-center h-[520px] text-center">
-              <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
-              <p className="text-slate-600 font-medium">Select a driver</p>
-              <p className="text-sm text-slate-500 mt-1">Choose a driver from the list to view and send messages</p>
+            <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-8 flex flex-col items-center justify-center h-[520px] text-center">
+              <MessageSquare className="w-12 h-12 text-[#7A9AB8] mb-3" />
+              <p className="text-[#1A4A7A] font-medium font-['Oswald']">Select a driver</p>
+              <p className="text-sm text-[#7A9AB8] mt-1">Choose a driver from the list to view and send messages</p>
             </div>
           )}
         </div>

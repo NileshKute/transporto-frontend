@@ -27,23 +27,23 @@ export function ConfirmDialog({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="sm">
       <div className="p-6 text-center">
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${isDanger ? 'bg-red-50' : 'bg-blue-50'}`}>
-          <AlertTriangle className={`w-6 h-6 ${isDanger ? 'text-red-600' : 'text-blue-600'}`} />
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${isDanger ? 'bg-[#DC2626]/10' : 'bg-[#42A5F5]/10'}`}>
+          <AlertTriangle className={`w-6 h-6 ${isDanger ? 'text-[#DC2626]' : 'text-[#42A5F5]'}`} />
         </div>
-        <h3 className="text-lg font-semibold text-[#0f172a] mb-2">{title}</h3>
-        <p className="text-[#475569] text-sm mb-6">{message}</p>
+        <h3 className="font-['Oswald'] text-lg font-semibold text-[#0D2847] mb-2">{title}</h3>
+        <p className="text-[#7A9AB8] text-sm mb-6 font-['Rajdhani']">{message}</p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-[#475569] bg-white border border-[#cbd5e1] hover:bg-[#f1f5f9] rounded-lg transition-colors"
+            className="px-5 py-2.5 text-sm font-medium text-[#0D2847] bg-white border border-[#E0E8F0] hover:bg-[#F4F6F8] rounded-lg transition-colors font-['Barlow_Condensed'] uppercase tracking-wider"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 ${
-              isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-[#2563eb] hover:bg-[#1d4ed8]'
+            className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 font-['Barlow_Condensed'] uppercase tracking-wider ${
+              isDanger ? 'bg-[#DC2626] hover:bg-[#B91C1C]' : 'bg-[#1565C0] hover:bg-[#0D2847]'
             }`}
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

@@ -15,7 +15,7 @@ const E_TYPES = ['PUNCTURE','ACCIDENT','BREAKDOWN','ENGINE_FAILURE','FUEL_EMPTY'
 const E_STATUSES = ['PENDING','ACKNOWLEDGED','IN_PROGRESS','RESOLVED','CLOSED'];
 const PRIORITIES = ['LOW','MEDIUM','HIGH','CRITICAL'];
 
-const priorityBorder: Record<string, string> = { LOW: 'border-l-slate-500', MEDIUM: 'border-l-blue-500', HIGH: 'border-l-amber-500', CRITICAL: 'border-l-red-500' };
+const priorityBorder: Record<string, string> = { LOW: 'border-l-[#7A9AB8]', MEDIUM: 'border-l-[#1565C0]', HIGH: 'border-l-[#F59E0B]', CRITICAL: 'border-l-[#DC2626]' };
 const typeIcon: Record<string, string> = { PUNCTURE: '🛞', ACCIDENT: '💥', BREAKDOWN: '🔧', ENGINE_FAILURE: '⚙️', FUEL_EMPTY: '⛽', FIRE: '🔥', THEFT: '🚨' };
 
 export default function EmergenciesPage() {
@@ -52,16 +52,16 @@ export default function EmergenciesPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-bold text-slate-900">Emergencies</h2><p className="text-sm text-slate-500">Track and resolve incidents</p></div>
-        <button onClick={() => { setForm({ priority: 'HIGH' }); setModalOpen(true); }} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors">
+        <div><h2 className="font-['Oswald'] text-xl font-bold text-[#0D2847] tracking-wide uppercase">Emergencies</h2><p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">Track and resolve incidents</p></div>
+        <button onClick={() => { setForm({ priority: 'HIGH' }); setModalOpen(true); }} className="flex items-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors">
           <Plus className="w-4 h-4" /> Report Emergency
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-5 flex flex-wrap gap-2">
+      <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4 mb-5 flex flex-wrap gap-2">
         {['', ...E_STATUSES].map(s => (
           <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }}
-            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}>
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'border border-[#E0E8F0] text-slate-700 hover:bg-slate-50'}`}>
             {s || 'All'}
           </button>
         ))}
@@ -70,28 +70,28 @@ export default function EmergenciesPage() {
       {isLoading ? <LoadingSpinner /> : !data?.data?.length ? <EmptyState message="No emergencies found" description="All clear!" /> : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {data.data.map((e: any) => (
-            <div key={e.id} className={`bg-white rounded-xl border border-slate-200 p-5 border-l-4 shadow-sm ${priorityBorder[e.priority] || 'border-l-slate-400'}`}>
+            <div key={e.id} className={`bg-white rounded-xl border border-[#E0E8F0] p-5 border-l-4 shadow-sm ${priorityBorder[e.priority] || 'border-l-[#42A5F5]'}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{typeIcon[e.type] || '⚠️'}</span>
-                  <span className="font-bold text-slate-900 text-sm">{e.type?.replace(/_/g,' ')}</span>
+                  <span className="font-bold text-[#0D2847] text-sm">{e.type?.replace(/_/g,' ')}</span>
                 </div>
                 <StatusBadge status={e.status} />
               </div>
-              <p className="text-xs text-slate-400 mb-3 line-clamp-2">{e.description}</p>
+              <p className="text-xs text-[#7A9AB8] mb-3 line-clamp-2">{e.description}</p>
               <div className="space-y-1.5 mb-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="font-mono text-blue-400">{e.vehicle?.regNumber}</span>
+                <div className="flex items-center gap-2 text-xs text-[#1A4A7A]">
+                  <span className="font-mono text-[#42A5F5]">{e.vehicle?.regNumber}</span>
                   <span>•</span>
                   <span>{e.driver?.name}</span>
                 </div>
-                {e.location && <div className="flex items-center gap-1.5 text-xs text-slate-500"><MapPin className="w-3 h-3 text-red-400" />{e.location}</div>}
-                {e.driver?.phone && <div className="flex items-center gap-1.5 text-xs text-slate-500"><Phone className="w-3 h-3" />{e.driver.phone}</div>}
-                <p className="text-xs text-slate-600">{formatDateTime(e.createdAt)}</p>
+                {e.location && <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]"><MapPin className="w-3 h-3 text-[#DC2626]" />{e.location}</div>}
+                {e.driver?.phone && <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]"><Phone className="w-3 h-3" />{e.driver.phone}</div>}
+                <p className="text-xs text-[#1A4A7A]">{formatDateTime(e.createdAt)}</p>
               </div>
               {['PENDING','ACKNOWLEDGED','IN_PROGRESS'].includes(e.status) && (
                 <button onClick={() => { setResolveItem(e); setResolveForm({ resolvedBy: '', resolution: '' }); }}
-                  className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors">
+                  className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-[#16A34A] bg-[#16A34A]/10 hover:bg-[#16A34A]/20 rounded-lg transition-colors">
                   <CheckCircle className="w-3.5 h-3.5" /> Resolve
                 </button>
               )}
@@ -106,42 +106,42 @@ export default function EmergenciesPage() {
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Vehicle *</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Vehicle *</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')}>
                 <option value="">Select Vehicle</option>
                 {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Driver *</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')}>
                 <option value="">Select Driver</option>
                 {drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Emergency Type *</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Emergency Type *</label>
               <select value={form.type || ''} onChange={f('type')}>
                 <option value="">Select Type</option>
                 {E_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g,' ')}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Priority</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Priority</label>
               <select value={form.priority || 'HIGH'} onChange={f('priority')}>
                 {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Date *</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Date *</label>
               <input type="date" value={form.date || ''} onChange={f('date')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Location</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Location</label>
               <input value={form.location || ''} onChange={f('location')} placeholder="NH48, Manesar" />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Description *</label>
+              <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Description *</label>
               <textarea value={form.description || ''} onChange={f('description')} rows={3} placeholder="Describe the emergency..." className="resize-none" />
             </div>
           </div>
@@ -157,13 +157,13 @@ export default function EmergenciesPage() {
       {/* Resolve Modal */}
       <Modal isOpen={!!resolveItem} onClose={() => setResolveItem(null)} title="Resolve Emergency" size="sm">
         <div className="p-5 space-y-4">
-          <p className="text-sm text-slate-400">{resolveItem?.type?.replace(/_/g,' ')} — {resolveItem?.vehicle?.regNumber}</p>
+          <p className="text-sm text-[#7A9AB8]">{resolveItem?.type?.replace(/_/g,' ')} — {resolveItem?.vehicle?.regNumber}</p>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Resolved By</label>
+            <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Resolved By</label>
             <input value={resolveForm.resolvedBy || ''} onChange={e => setResolveForm((p: any) => ({ ...p, resolvedBy: e.target.value }))} placeholder="Name of resolver" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Resolution Notes *</label>
+            <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Resolution Notes *</label>
             <textarea value={resolveForm.resolution || ''} onChange={e => setResolveForm((p: any) => ({ ...p, resolution: e.target.value }))} rows={3} placeholder="How was it resolved?" className="resize-none" />
           </div>
           <div className="flex gap-3">

@@ -49,53 +49,53 @@ export default function ShiftsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-bold text-slate-900">Shifts</h2><p className="text-sm text-slate-500">Driver shift management</p></div>
-        <button onClick={() => { setForm({}); setModalOpen(true); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors">
+        <div><h2 className="font-['Oswald'] text-xl font-bold text-[#0D2847] tracking-wide uppercase">Shifts</h2><p className="text-sm text-[#1A4A7A]">Driver shift management</p></div>
+        <button onClick={() => { setForm({}); setModalOpen(true); }} className="flex items-center gap-2 bg-[#1565C0] hover:bg-[#0D2847] text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors">
           <Plus className="w-4 h-4" /> Create Shift
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-5 flex flex-wrap gap-2">
+      <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4 mb-5 flex flex-wrap gap-2">
         {['', 'SCHEDULED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map(s => (
           <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }}
-            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}>
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'border border-[#E0E8F0] text-[#0D2847] hover:bg-[#F4F6F8]'}`}>
             {s || 'All'}
           </button>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm overflow-hidden">
         {isLoading ? <LoadingSpinner /> : !data?.data?.length ? <EmptyState message="No shifts found" /> : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Driver</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Vehicle</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Start</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">End</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Hours</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Overtime</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                <tr className="bg-[#F4F6F8] border-b border-[#E0E8F0]">
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Driver</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Vehicle</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Start</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">End</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Hours</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Overtime</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((s: any) => (
-                  <tr key={s.id} className={`hover:bg-blue-50/50 transition-colors ${s.overtime > 0 ? 'border-l-4 border-l-amber-500 bg-amber-50/50' : ''}`}>
-                    <td className="px-4 py-3.5 font-medium text-slate-900">{s.driver?.name}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-700 font-mono">{s.vehicle?.regNumber || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500">{formatDate(s.date)}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600">{formatDateTime(s.startTime)}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500">{s.endTime ? formatDateTime(s.endTime) : '—'}</td>
-                    <td className="px-4 py-3.5 font-mono font-medium text-slate-900">{s.hoursWorked != null ? `${Math.floor(s.hoursWorked)}h ${Math.round((s.hoursWorked % 1) * 60)}m` : '—'}</td>
-                    <td className="px-4 py-3.5">{s.overtime > 0 ? <span className="text-amber-600 font-bold text-sm">+{s.overtime}h OT</span> : <span className="text-slate-500">—</span>}</td>
+                  <tr key={s.id} className={`hover:bg-[#F4F6F8] transition-colors ${s.overtime > 0 ? 'border-l-4 border-l-[#F59E0B] bg-[#F59E0B]/10' : ''}`}>
+                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{s.driver?.name}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{s.vehicle?.regNumber || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#1A4A7A]">{formatDate(s.date)}</td>
+                    <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{formatDateTime(s.startTime)}</td>
+                    <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{s.endTime ? formatDateTime(s.endTime) : '—'}</td>
+                    <td className="px-4 py-3.5 font-mono font-medium text-[#0D2847]">{s.hoursWorked != null ? `${Math.floor(s.hoursWorked)}h ${Math.round((s.hoursWorked % 1) * 60)}m` : '—'}</td>
+                    <td className="px-4 py-3.5">{s.overtime > 0 ? <span className="text-[#F59E0B] font-bold text-sm">+{s.overtime}h OT</span> : <span className="text-[#1A4A7A]">—</span>}</td>
                     <td className="px-4 py-3.5"><StatusBadge status={s.status} /></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
                         {s.status === 'SCHEDULED' && (
-                          <button onClick={() => startMutation.mutate(s.id)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors">
+                          <button onClick={() => startMutation.mutate(s.id)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#42A5F5] bg-[#42A5F5]/10 hover:bg-[#42A5F5]/20 rounded-lg transition-colors">
                             <Play className="w-3 h-3 fill-current" /> Start
                           </button>
                         )}
