@@ -50,21 +50,20 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col justify-center px-16 w-full">
           <div className="mb-12">
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-[#0D2847] to-[#1A4A7A] flex items-center justify-center border border-[#1A4A7A] relative">
-                <span className="font-['Bebas_Neue'] text-4xl text-white">G</span>
-                <span className="font-['Bebas_Neue'] text-4xl text-[#42A5F5]">K</span>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-[60px] h-[60px] rounded-lg bg-gradient-to-br from-[#0D2847] to-[#1A4A7A] flex items-center justify-center relative flex-shrink-0">
+                <span className="font-['Bebas_Neue'] text-3xl text-white">G</span>
+                <span className="font-['Bebas_Neue'] text-3xl text-[#42A5F5]">K</span>
                 <div className="absolute -bottom-1 left-0 right-0 h-[3px] bg-[#42A5F5] rounded-full" />
               </div>
+              <h1 className="font-['Oswald'] text-2xl font-bold text-white tracking-wider">G K ENTERPRISE</h1>
             </div>
-            <h1 className="font-['Oswald'] text-2xl font-bold text-white tracking-wider text-center">G K ENTERPRISE</h1>
-            <p className="font-['Barlow_Condensed'] text-[#42A5F5] tracking-widest uppercase text-center mt-2">Cold Chain Logistics</p>
-            <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] text-center mt-6">Since 2019</p>
+            <p className="font-['Barlow_Condensed'] text-[#42A5F5] tracking-[4px] uppercase">Cold Chain Logistics</p>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-center gap-4 text-[#64B5F6]">
-              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/10 flex items-center justify-center">
                 <Truck className="w-6 h-6 text-[#42A5F5]" />
               </div>
               <div>
@@ -73,7 +72,7 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="flex items-center gap-4 text-[#64B5F6]">
-              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/10 flex items-center justify-center">
                 <Snowflake className="w-6 h-6 text-[#42A5F5]" />
               </div>
               <div>
@@ -82,7 +81,7 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="flex items-center gap-4 text-[#64B5F6]">
-              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-[#42A5F5]/10 flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-[#42A5F5]" />
               </div>
               <div>
@@ -92,7 +91,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-16 text-sm text-[#7A9AB8] font-['Rajdhani']">Trusted by Indian transport businesses</p>
+          <p className="mt-16 text-sm text-[#7A9AB8] font-['Rajdhani']">Navi Mumbai · Since 2019</p>
         </div>
       </div>
 
