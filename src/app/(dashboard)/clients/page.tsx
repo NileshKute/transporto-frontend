@@ -29,17 +29,109 @@ interface Client {
   _count?: { vehicles?: number };
 }
 
-const BILLING_LABELS: Record<BillingType, string> = {
+const BILLING_LABELS: Record<string, string> = {
   MONTHLY_CONTRACT: 'Monthly',
   ADHOC: 'Adhoc',
   MIXED: 'Mixed',
 };
 
-const BILLING_CLASSES: Record<BillingType, string> = {
+const BILLING_CLASSES: Record<string, string> = {
   MONTHLY_CONTRACT: 'bg-[#1565C0]/10 text-[#1565C0]',
   ADHOC: 'bg-[#42A5F5]/10 text-[#42A5F5]',
   MIXED: 'bg-[#F59E0B]/10 text-[#F59E0B]',
 };
+
+/** Safe string for JSX — never returns an object (avoids React #310). */
+function displayText(value: unknown, fallback = '—'): string {
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object' && value !== null) {
+    const o = value as Record<string, unknown>;
+    if (typeof o.name === 'string') return o.name;
+    if (typeof o.label === 'string') return o.label;
+    if (typeof o.value === 'string' || typeof o.value === 'number' || typeof o.value === 'boolean') return String(o.value);
+  }
+  return fallback;
+}
+
+function optDisplay(value: unknown): string | undefined {
+  if (value == null || value === '') return undefined;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object' && value !== null) {
+    const o = value as Record<string, unknown>;
+    if (typeof o.name === 'string') return o.name;
+    if (typeof o.label === 'string') return o.label;
+    if (typeof o.value === 'string' || typeof o.value === 'number') return String(o.value);
+  }
+  return undefined;
+}
+
+function normalizeBillingType(raw: unknown): BillingType {
+  const s = typeof raw === 'string' ? raw : raw != null && typeof raw === 'object' && 'value' in (raw as object) ? String((raw as { value: unknown }).value) : '';
+  if (s === 'MONTHLY_CONTRACT' || s === 'ADHOC' || s === 'MIXED') return s;
+  const snake = typeof raw === 'string' ? raw : '';
+  if (snake === 'monthly_contract' || snake === 'MONTHLY') return 'MONTHLY_CONTRACT';
+  if (snake === 'adhoc') return 'ADHOC';
+  if (snake === 'mixed') return 'MIXED';
+  return 'MONTHLY_CONTRACT';
+}
+
+function vehicleCountFromRow(row: Record<string, unknown>): number {
+  const count = row._count;
+  if (count && typeof count === 'object' && count !== null) {
+    const v = (count as { vehicles?: unknown }).vehicles;
+    const n = typeof v === 'number' ? v : v != null ? Number(v) : 0;
+    return Number.isFinite(n) ? n : 0;
+  }
+  const alt = row.vehicleCount ?? row.vehicle_count;
+  const n = typeof alt === 'number' ? alt : alt != null ? Number(alt) : 0;
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Normalize one API client row for list + edit (primitives only in display fields). */
+function normalizeListClient(raw: unknown): Client | null {
+  if (raw == null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const id = r.id != null ? String(r.id) : '';
+  if (!id) return null;
+  const billingType = normalizeBillingType(r.billingType ?? r.billing_type);
+  const isActive = r.isActive === false || r.is_active === false ? false : true;
+  return {
+    id,
+    name: displayText(r.name, 'Client'),
+    address: optDisplay(r.address),
+    gstNumber: optDisplay(r.gstNumber ?? r.gst_number),
+    contactPerson: optDisplay(r.contactPerson ?? r.contact_person),
+    contactPhone: optDisplay(r.contactPhone ?? r.contact_phone),
+    contactEmail: optDisplay(r.contactEmail ?? r.contact_email),
+    billingType,
+    contractRate:
+      typeof r.contractRate === 'number'
+        ? r.contractRate
+        : r.contract_rate != null
+          ? Number(r.contract_rate)
+          : undefined,
+    adhocTripRate:
+      typeof r.adhocTripRate === 'number'
+        ? r.adhocTripRate
+        : r.adhoc_trip_rate != null
+          ? Number(r.adhoc_trip_rate)
+          : undefined,
+    paymentTermsDays:
+      typeof r.paymentTermsDays === 'number'
+        ? r.paymentTermsDays
+        : r.payment_terms_days != null
+          ? Number(r.payment_terms_days)
+          : 15,
+    isActive,
+    _count: { vehicles: vehicleCountFromRow(r) },
+  };
+}
+
+function normalizeClientsResponse(data: unknown): Client[] {
+  const arr = Array.isArray(data) ? data : [];
+  return arr.map(normalizeListClient).filter((c): c is Client => c != null);
+}
 
 const inputClass = 'w-full rounded-lg border border-[#E0E8F0] px-3 py-2 text-[#0D2847] focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/20 font-["Rajdhani"] text-sm';
 
@@ -53,8 +145,14 @@ export default function ClientsPage() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const res = await api.get('/clients');
-      return Array.isArray(res.data) ? res.data : res.data?.data ?? res.data ?? [];
+      try {
+        const res = await api.get('/clients');
+        const raw = Array.isArray(res.data) ? res.data : res.data?.data ?? res.data ?? [];
+        return normalizeClientsResponse(raw);
+      } catch (e) {
+        console.error('Clients list fetch failed:', e);
+        return [] as Client[];
+      }
     },
   });
 
@@ -149,20 +247,25 @@ export default function ClientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
-                {(clients as Client[]).map((c) => (
+                {clients.map((c) => {
+                  const billingKey = String(c.billingType ?? 'MONTHLY_CONTRACT');
+                  const billingLabel = BILLING_LABELS[billingKey] ?? billingKey.replace(/_/g, ' ');
+                  const billingClass = BILLING_CLASSES[billingKey] ?? 'bg-[#7A9AB8]/10 text-[#7A9AB8]';
+                  const vCount = c._count?.vehicles ?? 0;
+                  return (
                   <tr key={c.id} className="hover:bg-[#F4F6F8] transition-colors">
                     <td className="px-4 py-3.5 font-['Rajdhani'] text-sm font-medium text-[#0D2847]">
-                      <Link href={`/clients/${c.id}`} className="text-[#1565C0] hover:underline">{c.name}</Link>
+                      <Link href={`/clients/${c.id}`} className="text-[#1565C0] hover:underline">{displayText(c.name, 'Client')}</Link>
                     </td>
-                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#1A4A7A] font-mono">{c.gstNumber || '—'}</td>
-                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#0D2847]">{c.contactPerson || '—'}</td>
-                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#1A4A7A] font-mono">{c.contactPhone || '—'}</td>
+                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#1A4A7A] font-mono">{displayText(c.gstNumber, '—')}</td>
+                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#0D2847]">{displayText(c.contactPerson, '—')}</td>
+                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#1A4A7A] font-mono">{displayText(c.contactPhone, '—')}</td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-['Barlow_Condensed'] font-semibold ${BILLING_CLASSES[c.billingType]}`}>
-                        {BILLING_LABELS[c.billingType]}
+                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-['Barlow_Condensed'] font-semibold ${billingClass}`}>
+                        {billingLabel}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#0D2847]">{(c as any)._count?.vehicles ?? 0}</td>
+                    <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#0D2847]">{Number.isFinite(vCount) ? vCount : 0}</td>
                     <td className="px-4 py-3.5">
                       <span className={c.isActive ? 'text-[#16A34A] font-["Rajdhani"] text-sm font-medium' : 'text-[#DC2626] font-["Rajdhani"] text-sm'}>
                         {c.isActive ? 'Active' : 'Inactive'}
@@ -176,7 +279,8 @@ export default function ClientsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
