@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { formatIndianCurrency } from '@/lib/utils';
+import { displayText, toArray } from '@/lib/displayText';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -61,8 +62,13 @@ export default function CreateInvoicePage() {
   const { data: nextNum } = useQuery({
     queryKey: ['invoices-next-number'],
     queryFn: async () => {
-      const res = await api.get('/invoices/next-number');
-      return res.data?.number ?? res.data?.data?.number ?? res.data ?? '';
+      try {
+        const res = await api.get('/invoices/next-number');
+        const n = res.data?.number ?? res.data?.data?.number ?? res.data;
+        return typeof n === 'string' || typeof n === 'number' ? String(n) : '';
+      } catch {
+        return '';
+      }
     },
   });
 
@@ -70,23 +76,45 @@ export default function CreateInvoicePage() {
     if (nextNum && !invoiceNumber) setInvoiceNumber(String(nextNum));
   }, [nextNum, invoiceNumber]);
 
-  const { data: clients = [] } = useQuery({
+  const { data: clientsRaw = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const res = await api.get('/clients');
-      return Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      try {
+        const res = await api.get('/clients');
+        return Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 
+  const clientOptions = useMemo(() => {
+    return toArray<Record<string, unknown>>(clientsRaw)
+      .map((c) => {
+        const id = c.id != null ? String(c.id) : '';
+        if (!id) return null;
+        return { id, name: displayText(c.name, 'Client') };
+      })
+      .filter((x): x is { id: string; name: string } => x != null);
+  }, [clientsRaw]);
+
   const { data: client } = useQuery({
     queryKey: ['client', clientId],
-    queryFn: () => api.get(`/clients/${clientId}`).then(r => r.data?.data ?? r.data),
+    queryFn: async () => {
+      try {
+        const r = await api.get(`/clients/${clientId}`);
+        return r.data?.data ?? r.data;
+      } catch {
+        return null;
+      }
+    },
     enabled: !!clientId,
   });
 
   useEffect(() => {
-    if (!clientId || !client) return;
-    const terms = (client as any).paymentTermsDays ?? 15;
+    if (!clientId || !client || typeof client !== 'object') return;
+    const c = client as Record<string, unknown>;
+    const terms = Number(c.paymentTermsDays ?? c.payment_terms_days ?? 15) || 15;
     if (issueDate) {
       const d = new Date(issueDate);
       d.setDate(d.getDate() + terms);
@@ -112,10 +140,13 @@ export default function CreateInvoicePage() {
       const res = await api.post('/invoices', payload);
       return res.data?.data ?? res.data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: unknown) => {
       qc.invalidateQueries({ queryKey: ['invoices-list'] });
       toast.success('Invoice saved as draft');
-      router.push(`/invoices/${data.id}`);
+      const d = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+      const newId = d?.id != null ? String(d.id) : '';
+      if (newId) router.push(`/invoices/${newId}`);
+      else toast.error('Could not read new invoice id');
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to create'),
   });
@@ -163,7 +194,7 @@ export default function CreateInvoicePage() {
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1.5">Client *</label>
             <select className={inputClass} value={clientId} onChange={e => setClientId(e.target.value)} required>
               <option value="">Select client</option>
-              {(clients as any[]).map((c: any) => (
+              {clientOptions.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
