@@ -7,7 +7,8 @@ import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
-  LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText
+  LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
+  BookOpen, Wallet
 } from 'lucide-react';
 
 const navGroups = [
@@ -28,6 +29,13 @@ const navGroups = [
       { href: '/emergencies', icon: AlertTriangle, label: 'Emergencies' },
       { href: '/insurance', icon: Shield, label: 'Insurance' },
       { href: '/cold-storage', icon: Snowflake, label: 'Cold Storage' },
+    ]
+  },
+  {
+    label: 'ACCOUNTS',
+    items: [
+      { href: '/driver-ledger', icon: BookOpen, label: 'Driver Ledger' },
+      { href: '/salary', icon: Wallet, label: 'Salary' },
     ]
   },
   {
@@ -66,6 +74,8 @@ function getPageTitle(pathname: string) {
     '/cold-storage': 'Cold Storage',
     '/shifts': 'Shifts',
     '/whatsapp': 'WhatsApp',
+    '/driver-ledger': 'Driver Ledger',
+    '/salary': 'Salary',
   };
   return map[pathname] || 'Dashboard';
 }
@@ -130,6 +140,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/cold-storage')) { items.push({ label: 'Cold Storage', href: '/cold-storage' }); return items; }
     if (pathname.startsWith('/shifts')) { items.push({ label: 'Shifts', href: '/shifts' }); return items; }
     if (pathname.startsWith('/whatsapp')) { items.push({ label: 'WhatsApp', href: '/whatsapp' }); return items; }
+    if (pathname.startsWith('/driver-ledger')) { items.push({ label: 'Driver Ledger', href: '/driver-ledger' }); return items; }
+    if (pathname.startsWith('/salary')) { items.push({ label: 'Salary', href: '/salary' }); return items; }
     items.push({ label: pageTitle });
     return items;
   }, [pathname, pageTitle]);

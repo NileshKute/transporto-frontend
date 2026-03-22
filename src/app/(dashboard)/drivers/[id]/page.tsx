@@ -1,12 +1,13 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import api from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatCurrency, formatDate, formatKm } from '@/lib/utils';
-import { ArrowLeft, Users, Star, Phone } from 'lucide-react';
+import { formatCurrency, formatIndianCurrency, formatDate, formatKm } from '@/lib/utils';
+import { ArrowLeft, Users, Star, Phone, BookOpen, Wallet, TrendingDown } from 'lucide-react';
 
 export default function DriverDetailPage() {
   const { id } = useParams();
@@ -15,6 +16,19 @@ export default function DriverDetailPage() {
   const { data: d, isLoading } = useQuery({
     queryKey: ['driver', id],
     queryFn: () => api.get(`/drivers/${id}`).then(r => r.data),
+  });
+
+  const { data: balance } = useQuery({
+    queryKey: ['driver-balance', id],
+    queryFn: () => api.get(`/driver-ledger/balance/${id}`).then(r => r.data),
+    enabled: !!id,
+  });
+
+  const now = new Date();
+  const { data: summary } = useQuery({
+    queryKey: ['driver-summary', id, now.getMonth() + 1, now.getFullYear()],
+    queryFn: () => api.get(`/driver-ledger/summary/${id}`, { params: { month: now.getMonth() + 1, year: now.getFullYear() } }).then(r => r.data),
+    enabled: !!id,
   });
 
   if (isLoading) return <LoadingSpinner />;
@@ -33,6 +47,7 @@ export default function DriverDetailPage() {
             <div className="flex items-center gap-2 mt-0.5">
               <Phone className="w-3 h-3 text-[#7A9AB8]" />
               <span className="text-sm text-[#7A9AB8] font-mono">{d.phone}</span>
+              {d.employeeCode && <span className="text-xs font-mono text-[#42A5F5] ml-2">{d.employeeCode}</span>}
             </div>
           </div>
         </div>
@@ -71,6 +86,70 @@ export default function DriverDetailPage() {
           ) : <EmptyState message="No vehicle assigned" />}
         </div>
       </div>
+
+      {/* Ledger Summary */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#1565C0]/10 flex items-center justify-center"><Wallet className="w-4 h-4 text-[#1565C0]" /></div>
+          <div>
+            <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Base Salary</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(d.baseSalary ?? d.salary)}</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#DC2626]/10 flex items-center justify-center"><TrendingDown className="w-4 h-4 text-[#DC2626]" /></div>
+          <div>
+            <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Outstanding Advances</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#DC2626]">{formatIndianCurrency(balance?.outstandingBalance ?? 0)}</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#16A34A]/10 flex items-center justify-center"><BookOpen className="w-4 h-4 text-[#16A34A]" /></div>
+          <div>
+            <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Net Balance (This Month)</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(summary?.netBalance ?? 0)}</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center justify-center">
+          <Link href={`/driver-ledger?driverId=${id}`} className="text-[#1565C0] font-['Barlow_Condensed'] text-sm uppercase tracking-wider hover:underline flex items-center gap-1">
+            <BookOpen className="w-4 h-4" /> View Full Ledger
+          </Link>
+        </div>
+      </div>
+
+      {/* Recent Ledger Entries */}
+      {summary?.entries?.length > 0 && (
+        <div className="bg-white border border-[#E0E8F0] rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-[#E0E8F0] flex items-center justify-between">
+            <h3 className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#1A4A7A] text-sm">Recent Ledger Entries</h3>
+            <span className="font-['Rajdhani'] text-xs text-[#7A9AB8]">{summary.entries.length} this month</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[#F4F6F8] border-b border-[#E0E8F0]">
+                  <th className="text-left px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#1A4A7A]">Date</th>
+                  <th className="text-left px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#1A4A7A]">Type</th>
+                  <th className="text-left px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#1A4A7A]">Description</th>
+                  <th className="text-left px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#1A4A7A]">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E0E8F0]">
+                {summary.entries.slice(0, 10).map((e: any) => (
+                  <tr key={e.id}>
+                    <td className="px-4 py-2 font-['Rajdhani'] text-[#0D2847]">{formatDate(e.date)}</td>
+                    <td className="px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#7A9AB8]">{(e.type || '').replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-2 font-['Rajdhani'] text-[#0D2847]">{e.description || '—'}</td>
+                    <td className={`px-4 py-2 font-['Oswald'] font-semibold ${e.isCredit ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                      {e.isCredit ? '+' : '-'}{formatIndianCurrency(Number(e.amount ?? 0))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Trips */}
       <div className="bg-white border border-[#E0E8F0] rounded-xl overflow-hidden">
