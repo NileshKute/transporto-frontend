@@ -9,30 +9,54 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatCurrency, formatIndianCurrency, formatDate, formatKm } from '@/lib/utils';
 import { ArrowLeft, Users, Star, Phone, BookOpen, Wallet, TrendingDown } from 'lucide-react';
 
+function safeStr(v: unknown, fallback = '—'): string {
+  if (v == null || v === '') return fallback;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (v instanceof Date) return v.toLocaleDateString('en-IN');
+  if (typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return String(o.name ?? o.label ?? o.value ?? fallback);
+  }
+  return fallback;
+}
+
+function safeNum(v: unknown, fallback = 0): number {
+  if (v == null) return fallback;
+  const n = Number(v);
+  return isNaN(n) ? fallback : n;
+}
+
 export default function DriverDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
   const router = useRouter();
 
-  const { data: d, isLoading } = useQuery({
+  const { data: d, isLoading, isError } = useQuery({
     queryKey: ['driver', id],
     queryFn: () => api.get(`/drivers/${id}`).then(r => r.data),
+    enabled: !!id,
   });
 
   const { data: balance } = useQuery({
     queryKey: ['driver-balance', id],
-    queryFn: () => api.get(`/driver-ledger/balance/${id}`).then(r => r.data),
+    queryFn: async () => { try { return (await api.get(`/driver-ledger/balance/${id}`)).data; } catch { return null; } },
     enabled: !!id,
   });
 
   const now = new Date();
   const { data: summary } = useQuery({
     queryKey: ['driver-summary', id, now.getMonth() + 1, now.getFullYear()],
-    queryFn: () => api.get(`/driver-ledger/summary/${id}`, { params: { month: now.getMonth() + 1, year: now.getFullYear() } }).then(r => r.data),
+    queryFn: async () => { try { return (await api.get(`/driver-ledger/summary/${id}`, { params: { month: now.getMonth() + 1, year: now.getFullYear() } })).data; } catch { return null; } },
     enabled: !!id,
   });
 
   if (isLoading) return <LoadingSpinner />;
-  if (!d) return <EmptyState message="Driver not found" />;
+  if (isError || !d) return <EmptyState message="Driver not found" />;
+
+  const trips: any[] = Array.isArray(d.trips) ? d.trips : [];
+  const ledgerEntries: any[] = Array.isArray(summary?.entries) ? summary.entries : [];
+  const vehicle = d.assignments?.[0]?.vehicle;
 
   return (
     <div className="space-y-5">
@@ -40,20 +64,20 @@ export default function DriverDetailPage() {
         <button onClick={() => router.back()} className="p-2 text-[#7A9AB8] hover:text-[#0D2847] hover:bg-[#F4F6F8] rounded-lg"><ArrowLeft className="w-4 h-4" /></button>
         <div className="flex items-center gap-3 flex-1">
           <div className="w-12 h-12 rounded-full bg-[#16A34A]/20 flex items-center justify-center text-[#16A34A] font-bold text-xl">
-            {d.name?.charAt(0)}
+            {safeStr(d.name, '?')[0]}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#0D2847]">{d.name}</h2>
+            <h2 className="text-xl font-bold text-[#0D2847]">{safeStr(d.name)}</h2>
             <div className="flex items-center gap-2 mt-0.5">
               <Phone className="w-3 h-3 text-[#7A9AB8]" />
-              <span className="text-sm text-[#7A9AB8] font-mono">{d.phone}</span>
-              {d.employeeCode && <span className="text-xs font-mono text-[#42A5F5] ml-2">{d.employeeCode}</span>}
+              <span className="text-sm text-[#7A9AB8] font-mono">{safeStr(d.phone)}</span>
+              {d.employeeCode && <span className="text-xs font-mono text-[#42A5F5] ml-2">{safeStr(d.employeeCode)}</span>}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-[#F59E0B]"><Star className="w-4 h-4 fill-current" /><span className="font-semibold">{d.rating?.toFixed(1)}</span></div>
-          <StatusBadge status={d.status} size="md" />
+          <div className="flex items-center gap-1 text-[#F59E0B]"><Star className="w-4 h-4 fill-current" /><span className="font-semibold">{safeNum(d.rating).toFixed(1)}</span></div>
+          <StatusBadge status={safeStr(d.status, 'UNKNOWN')} size="md" />
         </div>
       </div>
 
@@ -62,7 +86,20 @@ export default function DriverDetailPage() {
         <div className="lg:col-span-2 bg-white border border-[#E0E8F0] rounded-xl p-5">
           <h3 className="text-sm font-semibold text-[#1A4A7A] font-['Barlow_Condensed'] uppercase tracking-wider mb-4">Driver Information</h3>
           <div className="grid grid-cols-2 gap-4">
-            {[['License Number', d.licenseNumber],['License Type', d.licenseType || '—'],['License Expiry', formatDate(d.licenseExpiry)],['Experience', `${d.experience} years`],['Blood Group', d.bloodGroup || '—'],['Salary', formatCurrency(d.salary)],['City', d.city || '—'],['State', d.state || '—'],['Emergency Contact', d.emergencyName ? `${d.emergencyName} (${d.emergencyContact})` : '—'],['Total Trips', d.totalTrips],['Total KM', formatKm(d.totalKm)],['Joining Date', formatDate(d.joiningDate)]].map(([k, v]) => (
+            {([
+              ['License Number', safeStr(d.licenseNumber)],
+              ['License Type', safeStr(d.licenseType)],
+              ['License Expiry', formatDate(d.licenseExpiry)],
+              ['Experience', `${safeNum(d.experience)} years`],
+              ['Blood Group', safeStr(d.bloodGroup)],
+              ['Salary', formatCurrency(safeNum(d.salary, null as any))],
+              ['City', safeStr(d.city)],
+              ['State', safeStr(d.state)],
+              ['Emergency Contact', d.emergencyName ? `${safeStr(d.emergencyName)} (${safeStr(d.emergencyContact)})` : '—'],
+              ['Total Trips', String(safeNum(d.totalTrips))],
+              ['Total KM', formatKm(safeNum(d.totalKm, null as any))],
+              ['Joining Date', formatDate(d.joiningDate)],
+            ] as [string, string][]).map(([k, v]) => (
               <div key={k}>
                 <p className="text-xs text-[#7A9AB8] mb-1">{k}</p>
                 <p className="text-sm font-medium text-[#0D2847]">{v}</p>
@@ -74,14 +111,14 @@ export default function DriverDetailPage() {
         {/* Current Vehicle */}
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
           <h3 className="text-sm font-semibold text-[#1A4A7A] font-['Barlow_Condensed'] uppercase tracking-wider mb-4">Assigned Vehicle</h3>
-          {d.assignments?.[0] ? (
+          {vehicle ? (
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
                 <Users className="w-8 h-8 text-[#42A5F5]" />
               </div>
-              <p className="font-mono font-bold text-[#42A5F5] text-lg">{d.assignments[0].vehicle?.regNumber}</p>
-              <p className="text-sm text-[#1A4A7A] font-['Barlow_Condensed'] mt-1">{d.assignments[0].vehicle?.make} {d.assignments[0].vehicle?.model}</p>
-              <StatusBadge status={d.assignments[0].vehicle?.status} size="md" />
+              <p className="font-mono font-bold text-[#42A5F5] text-lg">{safeStr(vehicle.regNumber)}</p>
+              <p className="text-sm text-[#1A4A7A] font-['Barlow_Condensed'] mt-1">{safeStr(vehicle.make, '')} {safeStr(vehicle.model, '')}</p>
+              <StatusBadge status={safeStr(vehicle.status, 'UNKNOWN')} size="md" />
             </div>
           ) : <EmptyState message="No vehicle assigned" />}
         </div>
@@ -93,21 +130,21 @@ export default function DriverDetailPage() {
           <div className="w-9 h-9 rounded-lg bg-[#1565C0]/10 flex items-center justify-center"><Wallet className="w-4 h-4 text-[#1565C0]" /></div>
           <div>
             <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Base Salary</p>
-            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(d.baseSalary ?? d.salary)}</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(safeNum(d.baseSalary ?? d.salary))}</p>
           </div>
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[#DC2626]/10 flex items-center justify-center"><TrendingDown className="w-4 h-4 text-[#DC2626]" /></div>
           <div>
             <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Outstanding Advances</p>
-            <p className="font-['Oswald'] text-base font-bold text-[#DC2626]">{formatIndianCurrency(balance?.outstandingBalance ?? 0)}</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#DC2626]">{formatIndianCurrency(safeNum(balance?.outstandingBalance))}</p>
           </div>
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[#16A34A]/10 flex items-center justify-center"><BookOpen className="w-4 h-4 text-[#16A34A]" /></div>
           <div>
             <p className="font-['Barlow_Condensed'] text-[10px] uppercase tracking-wider text-[#7A9AB8]">Net Balance (This Month)</p>
-            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(summary?.netBalance ?? 0)}</p>
+            <p className="font-['Oswald'] text-base font-bold text-[#0D2847]">{formatIndianCurrency(safeNum(summary?.netBalance))}</p>
           </div>
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 flex items-center justify-center">
@@ -118,11 +155,11 @@ export default function DriverDetailPage() {
       </div>
 
       {/* Recent Ledger Entries */}
-      {summary?.entries?.length > 0 && (
+      {ledgerEntries.length > 0 && (
         <div className="bg-white border border-[#E0E8F0] rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-[#E0E8F0] flex items-center justify-between">
             <h3 className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#1A4A7A] text-sm">Recent Ledger Entries</h3>
-            <span className="font-['Rajdhani'] text-xs text-[#7A9AB8]">{summary.entries.length} this month</span>
+            <span className="font-['Rajdhani'] text-xs text-[#7A9AB8]">{ledgerEntries.length} this month</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -135,13 +172,13 @@ export default function DriverDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
-                {summary.entries.slice(0, 10).map((e: any) => (
-                  <tr key={e.id}>
+                {ledgerEntries.slice(0, 10).map((e: any) => (
+                  <tr key={String(e.id)}>
                     <td className="px-4 py-2 font-['Rajdhani'] text-[#0D2847]">{formatDate(e.date)}</td>
-                    <td className="px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#7A9AB8]">{(e.type || '').replace(/_/g, ' ')}</td>
-                    <td className="px-4 py-2 font-['Rajdhani'] text-[#0D2847]">{e.description || '—'}</td>
+                    <td className="px-4 py-2 font-['Barlow_Condensed'] text-xs uppercase text-[#7A9AB8]">{String(e.type || '').replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-2 font-['Rajdhani'] text-[#0D2847]">{safeStr(e.description)}</td>
                     <td className={`px-4 py-2 font-['Oswald'] font-semibold ${e.isCredit ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
-                      {e.isCredit ? '+' : '-'}{formatIndianCurrency(Number(e.amount ?? 0))}
+                      {e.isCredit ? '+' : '-'}{formatIndianCurrency(safeNum(e.amount))}
                     </td>
                   </tr>
                 ))}
@@ -158,17 +195,17 @@ export default function DriverDetailPage() {
           <table>
             <thead><tr><th>Trip #</th><th>Date</th><th>Route</th><th>Distance</th><th>Status</th><th>Bill</th></tr></thead>
             <tbody>
-              {d.trips?.map((t: any) => (
-                <tr key={t.id}>
-                  <td className="font-mono text-xs text-[#42A5F5]">{t.tripNumber}</td>
+              {trips.map((t: any) => (
+                <tr key={String(t.id)}>
+                  <td className="font-mono text-xs text-[#42A5F5]">{safeStr(t.tripNumber)}</td>
                   <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{formatDate(t.date)}</td>
-                  <td className="text-[#1A4A7A] text-xs">{t.startLocation} → {t.endLocation || '...'}</td>
-                  <td>{t.distanceKm ? `${t.distanceKm} km` : '—'}</td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td className="text-[#16A34A]">{formatCurrency(t.billAmount)}</td>
+                  <td className="text-[#1A4A7A] text-xs">{safeStr(t.startLocation, '')} → {safeStr(t.endLocation, '...')}</td>
+                  <td>{t.distanceKm ? `${safeNum(t.distanceKm)} km` : '—'}</td>
+                  <td><StatusBadge status={safeStr(t.status, 'UNKNOWN')} /></td>
+                  <td className="text-[#16A34A]">{formatCurrency(safeNum(t.billAmount, null as any))}</td>
                 </tr>
               ))}
-              {!d.trips?.length && <tr><td colSpan={6}><EmptyState message="No trips" /></td></tr>}
+              {trips.length === 0 && <tr><td colSpan={6}><EmptyState message="No trips" /></td></tr>}
             </tbody>
           </table>
         </div>

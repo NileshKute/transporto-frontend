@@ -89,7 +89,7 @@ export default function MaintenancePage() {
                     <td className="px-4 py-3.5 text-xs text-[#F59E0B]">{m.nextDueDate ? formatDate(m.nextDueDate) : '—'}</td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{m.garage || '—'}</td>
                     <td className="px-4 py-3.5">
-                      <button onClick={() => { setForm({ ...m, date: m.date?.split('T')[0], nextDueDate: m.nextDueDate?.split('T')[0] }); setEditItem(m); setModalOpen(true); }}
+                      <button onClick={() => { setForm({ ...m, date: String(m.date || '').split('T')[0], nextDueDate: String(m.nextDueDate || '').split('T')[0] }); setEditItem(m); setModalOpen(true); }}
                         className="text-xs text-[#42A5F5] hover:text-[#1565C0] px-2 py-1 bg-[#42A5F5]/10 rounded-lg font-['Barlow_Condensed']">Edit</button>
                     </td>
                   </tr>

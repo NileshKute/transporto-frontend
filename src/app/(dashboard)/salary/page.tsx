@@ -155,8 +155,8 @@ export default function SalaryPage() {
               <tbody className="divide-y divide-[#E0E8F0]">
                 {records.map((r: any) => (
                   <tr key={r.id} className="hover:bg-[#F4F6F8]/50">
-                    <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">{r.driver?.name ?? '—'}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">{r.driver?.employeeCode ?? '—'}</td>
+                    <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">{typeof r.driver === 'object' && r.driver ? String(r.driver.name ?? '—') : '—'}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">{typeof r.driver === 'object' && r.driver ? String(r.driver.employeeCode ?? '—') : '—'}</td>
                     <td className="px-3 py-2.5 font-['Oswald'] text-[#0D2847]">{formatIndianCurrency(Number(r.baseSalary ?? 0))}</td>
                     <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.totalAdvances ?? 0))}</td>
                     <td className="px-3 py-2.5 font-['Oswald'] text-[#1565C0]">{formatIndianCurrency(Number(r.extraDutyPay ?? 0))}</td>
@@ -224,18 +224,18 @@ function SalaryDetail({ record }: { record: any }) {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-[#1565C0]/10 flex items-center justify-center text-[#1565C0] font-bold text-lg">
-          {record.driver?.name?.charAt(0) ?? 'D'}
+          {String(record.driver?.name ?? 'D')[0]}
         </div>
         <div>
-          <p className="font-['Rajdhani'] font-semibold text-[#0D2847]">{record.driver?.name ?? 'Driver'}</p>
-          <p className="font-mono text-xs text-[#42A5F5]">{record.driver?.employeeCode ?? ''}</p>
+          <p className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.driver?.name ?? 'Driver')}</p>
+          <p className="font-mono text-xs text-[#42A5F5]">{String(record.driver?.employeeCode ?? '')}</p>
         </div>
-        <span className={`ml-auto inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[record.status] ?? ''}`}>
-          {record.status}
+        <span className={`ml-auto inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[String(record.status ?? '')] ?? ''}`}>
+          {String(record.status ?? '')}
         </span>
       </div>
       <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">
-        Period: {new Date(2000, record.month - 1).toLocaleString('default', { month: 'long' })} {record.year}
+        Period: {new Date(2000, Number(record.month ?? 1) - 1).toLocaleString('default', { month: 'long' })} {String(record.year ?? '')}
       </p>
 
       <div className="border border-[#E0E8F0] rounded-lg divide-y divide-[#E0E8F0]">
@@ -281,7 +281,7 @@ function PayForm({ record, onSave, isPending, onCancel }: any) {
   return (
     <form onSubmit={e => { e.preventDefault(); onSave({ paidAmount: Number(form.paidAmount), paidDate: form.paidDate, notes: form.notes }); }} className="space-y-4">
       <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">
-        {record.driver?.name} — Net Payable: <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(Number(record.netPayable ?? 0))}</span>
+        {String(record.driver?.name ?? 'Driver')} — Net Payable: <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(Number(record.netPayable ?? 0))}</span>
         {Number(record.paidAmount ?? 0) > 0 && <> (Already paid: {formatIndianCurrency(Number(record.paidAmount))})</>}
       </p>
       <div>

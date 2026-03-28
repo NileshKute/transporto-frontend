@@ -98,7 +98,7 @@ export default function InsurancePage() {
                     <td className="px-4 py-3.5"><StatusBadge status={i.status} /></td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{i.agentName || '—'}</td>
                     <td className="px-4 py-3.5">
-                      <button onClick={() => { setForm({ ...i, startDate: i.startDate?.split('T')[0], endDate: i.endDate?.split('T')[0] }); setEditItem(i); setModalOpen(true); }}
+                      <button onClick={() => { setForm({ ...i, startDate: String(i.startDate || '').split('T')[0], endDate: String(i.endDate || '').split('T')[0] }); setEditItem(i); setModalOpen(true); }}
                         className="text-xs text-[#42A5F5] hover:text-[#1565C0] px-2 py-1 bg-[#42A5F5]/10 rounded-lg font-['Barlow_Condensed']">Edit</button>
                     </td>
                   </tr>

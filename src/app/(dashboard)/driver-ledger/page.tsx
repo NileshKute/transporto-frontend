@@ -217,13 +217,13 @@ export default function DriverLedgerPage() {
                   return (
                     <tr key={e.id} className="hover:bg-[#F4F6F8]/50">
                       <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847] whitespace-nowrap">{formatDate(e.date)}</td>
-                      <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847]">{e.driver?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847]">{typeof e.driver === 'object' && e.driver ? String(e.driver.name ?? '—') : '—'}</td>
                       <td className="px-4 py-2.5">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${TYPE_BADGES[e.type] ?? TYPE_BADGES.OTHER}`}>
-                          {(e.type || '').replace(/_/g, ' ')}
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${TYPE_BADGES[String(e.type ?? '')] ?? TYPE_BADGES.OTHER}`}>
+                          {String(e.type || '').replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847] max-w-[200px] truncate">{e.description || '—'}</td>
+                      <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847] max-w-[200px] truncate">{typeof e.description === 'string' ? e.description : '—'}</td>
                       <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#16A34A]">{e.isCredit ? `+${formatIndianCurrency(amt)}` : ''}</td>
                       <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#DC2626]">{!e.isCredit ? `-${formatIndianCurrency(amt)}` : ''}</td>
                       <td className="px-4 py-2.5">

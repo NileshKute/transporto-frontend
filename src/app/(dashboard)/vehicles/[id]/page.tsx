@@ -25,9 +25,9 @@ export default function VehicleDetailPage() {
   if (!v) return <EmptyState message="Vehicle not found" />;
 
   const info = [
-    ['Make', v.make], ['Model', v.model], ['Year', v.year], ['Fuel Type', v.fuelType],
+    ['Make', v.make || '—'], ['Model', v.model || '—'], ['Year', String(v.year ?? '—')], ['Fuel Type', v.fuelType || '—'],
     ['Current KM', formatKm(v.currentKm)], ['Load Capacity', v.loadCapacityKg ? `${v.loadCapacityKg} kg` : '—'],
-    ['Tires', v.numTires || '—'], ['Tank', v.tankCapacityL ? `${v.tankCapacityL} L` : '—'],
+    ['Tires', String(v.numTires || '—')], ['Tank', v.tankCapacityL ? `${v.tankCapacityL} L` : '—'],
     ['Chassis', v.chassisNumber || '—'], ['Engine', v.engineNumber || '—'],
     ['Color', v.color || '—'], ['Purchase Date', formatDate(v.purchaseDate)],
   ];
@@ -95,8 +95,8 @@ export default function VehicleDetailPage() {
                   <tr key={f.id}>
                     <td className="font-mono text-xs text-[#F59E0B]">{f.entryNumber}</td>
                     <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{formatDate(f.date)}</td>
-                    <td className="text-[#1A4A7A]">{f.liters}L</td>
-                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">₹{f.ratePerLiter?.toFixed(2)}</td>
+                    <td className="text-[#1A4A7A]">{String(f.liters ?? 0)}L</td>
+                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">₹{Number(f.ratePerLiter ?? 0).toFixed(2)}</td>
                     <td className="text-[#16A34A] font-medium">{formatCurrency(f.totalCost)}</td>
                     <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{f.fuelStation || '—'}</td>
                   </tr>

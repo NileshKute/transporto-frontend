@@ -100,8 +100,8 @@ export default function ColdStorageDetailPage() {
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
           <p className="text-xs text-[#7A9AB8] mb-2">Capacity</p>
-          <p className="text-3xl font-bold text-[#0D2847]">{unit.capacityTotal}</p>
-          <p className="text-xs text-[#7A9AB8]">{unit.capacityUnit}</p>
+          <p className="text-3xl font-bold text-[#0D2847]">{String(unit.capacityTotal ?? 0)}</p>
+          <p className="text-xs text-[#7A9AB8]">{String(unit.capacityUnit ?? '—')}</p>
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
           <p className="text-xs text-[#7A9AB8] mb-2">Active Clients</p>

@@ -9,11 +9,39 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/utils';
+import { displayText } from '@/lib/displayText';
 import { Plus, Eye, Pencil, Trash2, Search, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 const STATUSES = ['AVAILABLE','ON_TRIP','ON_LEAVE','OFF_DUTY','TERMINATED'];
+
+function safeStr(v: unknown, fallback = '—'): string {
+  if (v == null || v === '') return fallback;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (v instanceof Date) return v.toLocaleDateString('en-IN');
+  if (typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return String(o.name ?? o.label ?? o.value ?? fallback);
+  }
+  return fallback;
+}
+
+function safeNum(v: unknown, fallback = 0): number {
+  if (v == null) return fallback;
+  const n = Number(v);
+  return isNaN(n) ? fallback : n;
+}
+
+function safeErrorMsg(e: unknown): string {
+  if (!e || typeof e !== 'object') return 'Failed to save';
+  const ax = e as any;
+  const msg = ax?.response?.data?.message;
+  if (typeof msg === 'string') return msg;
+  if (msg && typeof msg === 'object') return JSON.stringify(msg);
+  return 'Failed to save';
+}
 
 export default function DriversPage() {
   const qc = useQueryClient();
@@ -25,15 +53,26 @@ export default function DriversPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['drivers', page, search, status],
-    queryFn: () => api.get('/drivers', { params: { page, limit: 20, search: search || undefined, status: status || undefined } }).then(r => r.data),
+    queryFn: async () => {
+      try {
+        const r = await api.get('/drivers', { params: { page, limit: 20, search: search || undefined, status: status || undefined } });
+        return r.data;
+      } catch {
+        return { data: [], total: 0, totalPages: 0 };
+      }
+    },
   });
+
+  const rows: any[] = Array.isArray(data?.data) ? data.data : [];
+  const totalPages = safeNum(data?.totalPages, 0);
+  const total = safeNum(data?.total, 0);
 
   const saveMutation = useMutation({
     mutationFn: (payload: any) => editDriver ? api.put(`/drivers/${editDriver.id}`, payload) : api.post('/drivers', payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['drivers'] }); toast.success(editDriver ? 'Driver updated' : 'Driver created'); setModalOpen(false); setForm({}); setEditDriver(null); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to save'),
+    onError: (e: unknown) => toast.error(safeErrorMsg(e)),
   });
 
   const deleteMutation = useMutation({
@@ -44,6 +83,18 @@ export default function DriversPage() {
 
   const f = (name: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((p: any) => ({ ...p, [name]: e.target.value }));
+
+  const openEdit = (d: any) => {
+    const safe: any = {};
+    const textFields = ['name','phone','licenseNumber','licenseType','experience','salary','bloodGroup','city','state','emergencyContact','emergencyName','status','licenseExpiry','baseSalary','employeeCode'];
+    for (const key of textFields) {
+      safe[key] = d[key] != null ? String(d[key]) : '';
+    }
+    safe.id = d.id;
+    setForm(safe);
+    setEditDriver(d);
+    setModalOpen(true);
+  };
 
   return (
     <div className="space-y-5">
@@ -70,7 +121,7 @@ export default function DriversPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm overflow-hidden">
-        {isLoading ? <LoadingSpinner /> : !data?.data?.length ? <EmptyState message="No drivers found" /> : (
+        {isLoading ? <LoadingSpinner /> : rows.length === 0 ? <EmptyState message="No drivers found" /> : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -86,35 +137,35 @@ export default function DriversPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
-                {data.data.map((d: any) => (
-                  <tr key={d.id} className="hover:bg-blue-50/50 transition-colors">
+                {rows.map((d: any) => (
+                  <tr key={String(d.id)} className="hover:bg-blue-50/50 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm flex-shrink-0">
-                          {d.name?.charAt(0)}
+                          {safeStr(d.name, '?')[0]}
                         </div>
                         <div>
-                          <p className="font-medium text-[#0D2847] text-sm">{d.name}</p>
-                          <p className="text-xs text-[#1A4A7A]">{d.city || '—'}</p>
+                          <p className="font-medium text-[#0D2847] text-sm">{safeStr(d.name)}</p>
+                          <p className="text-xs text-[#1A4A7A]">{safeStr(d.city)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{d.phone}</td>
-                    <td className="px-4 py-3.5 text-xs text-[#0D2847] font-mono">{d.licenseNumber}</td>
-                    <td className="px-4 py-3.5 text-[#0D2847]">{d.experience ?? '—'} yrs</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{safeStr(d.phone)}</td>
+                    <td className="px-4 py-3.5 text-xs text-[#0D2847] font-mono">{safeStr(d.licenseNumber)}</td>
+                    <td className="px-4 py-3.5 text-[#0D2847]">{safeNum(d.experience)} yrs</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1 text-amber-600">
                         <Star className="w-3.5 h-3.5 fill-current" />
-                        <span className="text-sm font-medium font-mono">{(d.rating ?? 0).toFixed(1)}</span>
+                        <span className="text-sm font-medium font-mono">{safeNum(d.rating).toFixed(1)}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5"><StatusBadge status={d.status} /></td>
-                    <td className="px-4 py-3.5 text-[#1A4A7A] text-xs font-mono">{d.assignments?.[0]?.vehicle?.regNumber || '—'}</td>
+                    <td className="px-4 py-3.5"><StatusBadge status={safeStr(d.status, 'UNKNOWN')} /></td>
+                    <td className="px-4 py-3.5 text-[#1A4A7A] text-xs font-mono">{safeStr(d.assignments?.[0]?.vehicle?.regNumber)}</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
-                        <Link href={`/drivers/${d.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></Link>
-                        <button onClick={() => { setForm({ ...d }); setEditDriver(d); setModalOpen(true); }} className="p-2 text-[#1A4A7A] hover:bg-slate-100 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => setDeleteId(d.id)} className="p-2 text-[#1A4A7A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <Link href={`/drivers/${String(d.id)}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></Link>
+                        <button onClick={() => openEdit(d)} className="p-2 text-[#1A4A7A] hover:bg-slate-100 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => setDeleteId(String(d.id))} className="p-2 text-[#1A4A7A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -123,7 +174,7 @@ export default function DriversPage() {
             </table>
           </div>
         )}
-        {data && <Pagination page={page} totalPages={data.totalPages} total={data.total} limit={20} onPageChange={setPage} />}
+        {totalPages > 1 && <Pagination page={page} totalPages={totalPages} total={total} limit={20} onPageChange={setPage} />}
       </div>
 
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditDriver(null); }} title={editDriver ? 'Edit Driver' : 'Add Driver'} size="lg">
@@ -132,16 +183,16 @@ export default function DriversPage() {
             {[['name','Name *'],['phone','Phone *'],['licenseNumber','License Number *'],['licenseType','License Type'],['experience','Experience (years)'],['salary','Salary (₹)'],['bloodGroup','Blood Group'],['city','City'],['state','State'],['emergencyContact','Emergency Contact'],['emergencyName','Emergency Contact Name']].map(([n, l]) => (
               <div key={n}>
                 <label className="block text-xs font-medium text-[#475569] mb-1.5">{l}</label>
-                <input value={form[n] || ''} onChange={f(n)} className="border border-[#cbd5e1] rounded-lg" />
+                <input value={typeof form[n] === 'object' ? '' : (form[n] ?? '')} onChange={f(n)} className="border border-[#cbd5e1] rounded-lg" />
               </div>
             ))}
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">License Expiry *</label>
-              <input type="date" value={form.licenseExpiry ? form.licenseExpiry.split('T')[0] : ''} onChange={f('licenseExpiry')} className="border border-[#cbd5e1] rounded-lg" />
+              <input type="date" value={form.licenseExpiry ? String(form.licenseExpiry).split('T')[0] : ''} onChange={f('licenseExpiry')} className="border border-[#cbd5e1] rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">Status</label>
-              <select value={form.status || ''} onChange={f('status')} className="border border-[#cbd5e1] rounded-lg">
+              <select value={typeof form.status === 'string' ? form.status : ''} onChange={f('status')} className="border border-[#cbd5e1] rounded-lg">
                 {STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
               </select>
             </div>

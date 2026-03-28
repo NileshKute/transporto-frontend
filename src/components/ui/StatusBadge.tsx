@@ -31,15 +31,16 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string }> = 
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-  const config = statusConfig[status] || { bg: 'bg-[#42A5F5]/10', text: 'text-[#42A5F5]', dot: 'bg-[#42A5F5]' };
+  const s = typeof status === 'string' ? status : String(status ?? 'UNKNOWN');
+  const config = statusConfig[s] || { bg: 'bg-[#42A5F5]/10', text: 'text-[#42A5F5]', dot: 'bg-[#42A5F5]' };
   const sizeClass = size === 'sm' ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-1';
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full font-medium border border-transparent font-['Barlow_Condensed'] ${config.bg} ${config.text} ${sizeClass}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${
-        status === 'WARNING' || status === 'CRITICAL' ? 'animate-pulse' : ''
+        s === 'WARNING' || s === 'CRITICAL' ? 'animate-pulse' : ''
       }`} />
-      {status.replace(/_/g, ' ')}
+      {s.replace(/_/g, ' ')}
     </span>
   );
 }
