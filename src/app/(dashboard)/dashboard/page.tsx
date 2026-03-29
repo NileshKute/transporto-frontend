@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { LoadingSpinner, TableSkeleton } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate, formatIndianCurrency } from '@/lib/utils';
-import { Truck, Users, Route, Fuel, Wrench, AlertTriangle, Shield, Snowflake, Building2, FileText } from 'lucide-react';
+import { Truck, Users, Route, Fuel, Wrench, AlertTriangle, Shield, Snowflake, Building2, FileText, FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 
@@ -91,6 +91,10 @@ export default function DashboardPage() {
       const res = await api.get('/trips', { params: { limit: 500 } });
       return res.data?.data ?? res.data ?? [];
     },
+  });
+  const { data: expirySummary } = useQuery({
+    queryKey: ['vehicle-expiry-summary'],
+    queryFn: () => api.get('/vehicles/expiry-summary').then(r => r.data),
   });
 
   const invoices = Array.isArray(invoicesRaw) ? invoicesRaw : [];
@@ -288,8 +292,10 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         {[
+          { label: 'Docs Expired', value: expirySummary?.expired ?? 0, icon: FileWarning, border: 'border-l-[#DC2626]', iconClass: 'text-[#DC2626]', href: '/vehicles' },
+          { label: 'Docs Expiring Soon', value: expirySummary?.expiringSoon ?? 0, icon: FileWarning, border: 'border-l-[#F59E0B]', iconClass: 'text-[#F59E0B]', href: '/vehicles' },
           { label: 'Active Maintenance', value: stats?.maintenance?.active ?? 0, icon: Wrench, border: 'border-l-[#F59E0B]', iconClass: 'text-[#F59E0B]', href: '/maintenance' },
           { label: 'Pending Emergencies', value: stats?.emergencies?.pending ?? 0, icon: AlertTriangle, border: 'border-l-[#DC2626]', iconClass: 'text-[#DC2626]', href: '/emergencies' },
           { label: 'Expiring Insurance', value: stats?.insurance?.expiring ?? 0, icon: Shield, border: 'border-l-[#F59E0B]', iconClass: 'text-[#F59E0B]', href: '/insurance' },

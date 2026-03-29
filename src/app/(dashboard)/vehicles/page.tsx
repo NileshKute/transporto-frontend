@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatKm } from '@/lib/utils';
-import { Plus, Eye, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Search, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -17,34 +17,92 @@ const VEHICLE_TYPES = ['TRUCK','MINI_TRUCK','TRAILER','REEFER_TRUCK','TANKER','P
 const FUEL_TYPES = ['DIESEL','PETROL','CNG','ELECTRIC','HYBRID'];
 const STATUSES = ['ACTIVE','IN_MAINTENANCE','IDLE','BREAKDOWN','SOLD','DECOMMISSIONED'];
 
-function VehicleFormFields({ form, setForm }: { form: any, setForm: any }) {
-  const field = (name: string, label: string, type = 'text', opts?: any) => (
-    <div>
-      <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1.5">{label}</label>
-      {opts?.options ? (
-        <select value={form[name] || ''} onChange={e => setForm((p: any) => ({ ...p, [name]: e.target.value }))}>
-          <option value="">Select {label}</option>
-          {opts.options.map((o: string) => <option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
-        </select>
-      ) : (
-        <input type={type} value={form[name] || ''} onChange={e => setForm((p: any) => ({ ...p, [name]: type === 'number' ? Number(e.target.value) : e.target.value }))} placeholder={opts?.placeholder} />
-      )}
+const INSURANCE_TYPES = ['Comprehensive', 'Third Party'];
+const PERMIT_TYPES = ['National', 'State', 'Temporary'];
+
+function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-[#E0E8F0] rounded-lg overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F4F6F8] hover:bg-[#E0E8F0] transition-colors">
+        <span className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">{title}</span>
+        <ChevronDown className={`w-4 h-4 text-[#7A9AB8] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="p-4 grid grid-cols-2 gap-3">{children}</div>}
     </div>
   );
+}
+
+function VehicleFormFields({ form, setForm }: { form: any, setForm: any }) {
+  const field = (name: string, label: string, type = 'text', opts?: any) => {
+    const val = type === 'date' && form[name] ? String(form[name]).split('T')[0] : (form[name] ?? '');
+    return (
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1.5">{label}</label>
+        {opts?.options ? (
+          <select value={form[name] || ''} onChange={e => setForm((p: any) => ({ ...p, [name]: e.target.value }))}>
+            <option value="">Select {label}</option>
+            {opts.options.map((o: string) => <option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
+          </select>
+        ) : (
+          <input type={type} value={val} onChange={e => setForm((p: any) => ({ ...p, [name]: type === 'number' ? Number(e.target.value) : e.target.value }))} placeholder={opts?.placeholder} />
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {field('regNumber', 'Reg Number *', 'text', { placeholder: 'DL01AB1234' })}
-      {field('type', 'Vehicle Type *', 'text', { options: VEHICLE_TYPES })}
-      {field('make', 'Make *', 'text', { placeholder: 'Tata' })}
-      {field('model', 'Model *', 'text', { placeholder: 'Prima 4928' })}
-      {field('year', 'Year *', 'number', { placeholder: '2022' })}
-      {field('fuelType', 'Fuel Type', 'text', { options: FUEL_TYPES })}
-      {field('loadCapacityKg', 'Load Capacity (kg)', 'number')}
-      {field('numTires', 'Number of Tires', 'number')}
-      {field('tankCapacityL', 'Tank Capacity (L)', 'number')}
-      {field('color', 'Color')}
-      {field('chassisNumber', 'Chassis Number')}
-      {field('engineNumber', 'Engine Number')}
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 gap-4">
+        {field('regNumber', 'Reg Number *', 'text', { placeholder: 'DL01AB1234' })}
+        {field('type', 'Vehicle Type *', 'text', { options: VEHICLE_TYPES })}
+        {field('make', 'Make *', 'text', { placeholder: 'Tata' })}
+        {field('model', 'Model *', 'text', { placeholder: 'Prima 4928' })}
+        {field('year', 'Year *', 'number', { placeholder: '2022' })}
+        {field('fuelType', 'Fuel Type', 'text', { options: FUEL_TYPES })}
+        {field('loadCapacityKg', 'Load Capacity (kg)', 'number')}
+        {field('numTires', 'Number of Tires', 'number')}
+        {field('tankCapacityL', 'Tank Capacity (L)', 'number')}
+        {field('color', 'Color')}
+        {field('chassisNumber', 'Chassis Number')}
+        {field('engineNumber', 'Engine Number')}
+        {field('ownerName', 'Owner Name')}
+        {field('rcNumber', 'RC Number')}
+      </div>
+
+      <CollapsibleSection title="PUC Details">
+        {field('pucNumber', 'PUC Number')}
+        {field('pucIssueDate', 'Issue Date', 'date')}
+        {field('pucExpiryDate', 'Expiry Date', 'date')}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Insurance Details">
+        {field('insurancePolicyNumber', 'Policy Number')}
+        {field('insuranceCompany', 'Company')}
+        {field('insuranceType', 'Type', 'text', { options: INSURANCE_TYPES })}
+        {field('insuranceStartDate', 'Start Date', 'date')}
+        {field('insuranceExpiryDate', 'Expiry Date', 'date')}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Fitness Certificate">
+        {field('fitnessNumber', 'Fitness Number')}
+        {field('fitnessIssueDate', 'Issue Date', 'date')}
+        {field('fitnessExpiryDate', 'Expiry Date', 'date')}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Road Tax">
+        {field('taxReceiptNumber', 'Receipt Number')}
+        {field('taxPaidDate', 'Paid Date', 'date')}
+        {field('taxExpiryDate', 'Expiry Date', 'date')}
+        {field('taxAmount', 'Amount (₹)', 'number')}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Permit Details">
+        {field('permitNumber', 'Permit Number')}
+        {field('permitType', 'Type', 'text', { options: PERMIT_TYPES })}
+        {field('permitExpiryDate', 'Expiry Date', 'date')}
+      </CollapsibleSection>
     </div>
   );
 }
