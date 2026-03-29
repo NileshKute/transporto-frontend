@@ -7,7 +7,10 @@ import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Wallet, Users, CheckCircle, Calculator, Eye, CircleDollarSign, CreditCard, IndianRupee } from 'lucide-react';
+import {
+  Wallet, Users, CheckCircle, Calculator, Eye, CircleDollarSign,
+  CreditCard, IndianRupee,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const STATUS_BADGES: Record<string, string> = {
@@ -54,7 +57,8 @@ export default function SalaryPage() {
       const paidAmt = Number(r.paidAmount ?? 0);
       totalPayroll += net;
       paid += paidAmt;
-      if (String(r.status ?? '') !== 'PAID') pending += net - paidAmt;
+      const st = String(r.status ?? '');
+      if (st !== 'PAID') pending += net - paidAmt;
     }
     return { totalPayroll, paid, pending, count: records.length };
   }, [records]);
@@ -186,7 +190,7 @@ export default function SalaryPage() {
                             <button onClick={() => approveMut.mutate(r.id)} disabled={approveMut.isPending} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
                           )}
                           {!isPaid && (
-                            <button onClick={() => { setPayRecord(r); setPayOpen(true); }} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Mark as Paid"><CircleDollarSign className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => { setPayRecord(r); setPayOpen(true); }} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Pay Salary"><CircleDollarSign className="w-3.5 h-3.5" /></button>
                           )}
                         </div>
                       </td>
@@ -205,7 +209,7 @@ export default function SalaryPage() {
       </Modal>
 
       {/* Pay Modal */}
-      <Modal isOpen={payOpen} onClose={() => { setPayOpen(false); setPayRecord(null); }} title="Mark as Paid">
+      <Modal isOpen={payOpen} onClose={() => { setPayOpen(false); setPayRecord(null); }} title="Pay Salary">
         {payRecord && (
           <PayForm
             record={payRecord}
@@ -220,19 +224,19 @@ export default function SalaryPage() {
 }
 
 function SalaryDetail({ record }: { record: any }) {
+  const baseSalary = Number(record.baseSalary ?? 0);
+  const extraDuty = Number(record.extraDutyPay ?? 0);
+  const bonuses = Number(record.bonuses ?? 0);
+  const otherCredits = Number(record.otherCredits ?? 0);
+  const totalAdvances = Number(record.totalAdvances ?? 0);
+  const penalties = Number(record.penalties ?? 0);
+  const otherDebits = Number(record.otherDebits ?? 0);
   const net = Number(record.netPayable ?? 0);
   const paid = Number(record.paidAmount ?? 0);
   const st = String(record.status ?? '');
   const isPaid = st === 'PAID';
-  const rows = [
-    { label: 'Base Salary', value: Number(record.baseSalary ?? 0), sign: '' },
-    { label: 'Total Advances', value: Number(record.totalAdvances ?? 0), sign: '(-)' },
-    { label: 'Extra Duty Pay', value: Number(record.extraDutyPay ?? 0), sign: '(+)' },
-    { label: 'Bonuses', value: Number(record.bonuses ?? 0), sign: '(+)' },
-    { label: 'Penalties', value: Number(record.penalties ?? 0), sign: '(-)' },
-    { label: 'Other Credits', value: Number(record.otherCredits ?? 0), sign: '(+)' },
-    { label: 'Other Debits', value: Number(record.otherDebits ?? 0), sign: '(-)' },
-  ];
+  const salaryPlusCredits = baseSalary + extraDuty + bonuses + otherCredits;
+  const totalDeductions = totalAdvances + penalties + otherDebits;
 
   return (
     <div className="space-y-4">
@@ -252,33 +256,55 @@ function SalaryDetail({ record }: { record: any }) {
         Period: {new Date(2000, Number(record.month ?? 1) - 1).toLocaleString('default', { month: 'long' })} {String(record.year ?? '')}
       </p>
 
-      {/* Breakdown */}
-      <div className="border border-[#E0E8F0] rounded-lg divide-y divide-[#E0E8F0]">
-        {rows.map(r => (
-          <div key={r.label} className="flex justify-between px-4 py-2 font-['Rajdhani'] text-sm">
-            <span className="text-[#7A9AB8]">{r.sign} {r.label}</span>
-            <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(r.value)}</span>
-          </div>
-        ))}
-        <div className="flex justify-between px-4 py-3 bg-[#F4F6F8]">
-          <span className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#0D2847]">Net Payable</span>
-          <span className="font-['Oswald'] text-xl font-bold text-[#1565C0]">{formatIndianCurrency(net)}</span>
+      {/* Salary Breakdown */}
+      <div className="border border-[#E0E8F0] rounded-lg overflow-hidden">
+        {/* Credits section */}
+        <div className="px-4 py-2 bg-[#F4F6F8]">
+          <span className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Earnings</span>
         </div>
+        <div className="divide-y divide-[#E0E8F0]">
+          <CalcRow label="Base Salary" value={baseSalary} />
+          {extraDuty > 0 && <CalcRow label="(+) Unpaid Extra Duty / Credits" value={extraDuty} color="#1565C0" />}
+          {bonuses > 0 && <CalcRow label="(+) Bonuses" value={bonuses} color="#16A34A" />}
+          {otherCredits > 0 && <CalcRow label="(+) Other Credits" value={otherCredits} color="#1565C0" />}
+        </div>
+        <div className="flex justify-between px-4 py-2 bg-[#E0E8F0]/50">
+          <span className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#0D2847]">Salary + Credits</span>
+          <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(salaryPlusCredits)}</span>
+        </div>
+
+        {/* Deductions section */}
+        <div className="px-4 py-2 bg-[#F4F6F8]">
+          <span className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#DC2626]">Deductions</span>
+        </div>
+        <div className="divide-y divide-[#E0E8F0]">
+          {totalAdvances > 0 && <CalcRow label="(-) Advances Already Given (Paid)" value={totalAdvances} color="#DC2626" />}
+          {penalties > 0 && <CalcRow label="(-) Penalties" value={penalties} color="#DC2626" />}
+          {otherDebits > 0 && <CalcRow label="(-) Other Deductions" value={otherDebits} color="#DC2626" />}
+          {totalDeductions === 0 && <CalcRow label="No deductions" value={0} />}
+        </div>
+
+        {/* Net */}
+        <div className="flex justify-between px-4 py-3 bg-[#0D2847]">
+          <span className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-white text-sm">NET PAYABLE</span>
+          <span className="font-['Oswald'] text-xl font-bold text-white">{formatIndianCurrency(net)}</span>
+        </div>
+
         {paid > 0 && (
-          <div className="flex justify-between px-4 py-2 font-['Rajdhani'] text-sm">
-            <span className="text-[#16A34A]">Paid</span>
+          <div className="flex justify-between px-4 py-2">
+            <span className="font-['Rajdhani'] text-sm text-[#16A34A]">Paid</span>
             <span className="font-['Oswald'] font-semibold text-[#16A34A]">{formatIndianCurrency(paid)}</span>
           </div>
         )}
         {paid > 0 && net - paid > 0 && (
-          <div className="flex justify-between px-4 py-2 font-['Rajdhani'] text-sm">
-            <span className="text-[#DC2626]">Remaining</span>
+          <div className="flex justify-between px-4 py-2 border-t border-[#E0E8F0]">
+            <span className="font-['Rajdhani'] text-sm text-[#DC2626]">Remaining</span>
             <span className="font-['Oswald'] font-semibold text-[#DC2626]">{formatIndianCurrency(net - paid)}</span>
           </div>
         )}
       </div>
 
-      {/* Payment Info (when paid) */}
+      {/* Payment Info */}
       {isPaid && (
         <div className="border border-[#16A34A]/30 bg-[#16A34A]/5 rounded-lg p-4 space-y-2">
           <div className="flex items-center gap-2 mb-2">
@@ -295,7 +321,7 @@ function SalaryDetail({ record }: { record: any }) {
             {record.paymentMode && (
               <>
                 <span className="font-['Rajdhani'] text-[#7A9AB8]">Mode</span>
-                <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.paymentMode ?? '').replace(/_/g, ' ')}</span>
+                <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.paymentMode).replace(/_/g, ' ')}</span>
               </>
             )}
             {record.transactionRef && (
@@ -320,6 +346,15 @@ function SalaryDetail({ record }: { record: any }) {
       {!isPaid && record.paidDate && (
         <p className="font-['Rajdhani'] text-xs text-[#7A9AB8]">Last payment: {formatDate(record.paidDate)}</p>
       )}
+    </div>
+  );
+}
+
+function CalcRow({ label, value, color }: { label: string; value: number; color?: string }) {
+  return (
+    <div className="flex justify-between px-4 py-2 font-['Rajdhani'] text-sm">
+      <span className="text-[#7A9AB8]">{label}</span>
+      <span className="font-['Oswald'] font-semibold" style={{ color: color || '#0D2847' }}>{formatIndianCurrency(value)}</span>
     </div>
   );
 }
@@ -359,7 +394,6 @@ function PayForm({ record, onSave, isPending, onCancel }: any) {
           <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-1">Already paid: {formatIndianCurrency(Number(record.paidAmount))}</p>
         )}
       </div>
-
       <div>
         <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Amount (₹) *</label>
         <input type="number" className={inputClass} value={form.paidAmount} onChange={e => setForm(f => ({ ...f, paidAmount: e.target.value }))} min={1} required />

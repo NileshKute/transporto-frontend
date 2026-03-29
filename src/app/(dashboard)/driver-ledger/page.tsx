@@ -7,7 +7,10 @@ import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { BookOpen, Plus, Download, Search, TrendingUp, TrendingDown, Banknote, Hash } from 'lucide-react';
+import {
+  BookOpen, Plus, Download, Search, TrendingUp, TrendingDown, Banknote,
+  Hash, CheckCircle, Clock, CreditCard,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MONTHS = [
@@ -47,6 +50,13 @@ const TYPE_BADGES: Record<string, string> = {
   OTHER: 'bg-[#7A9AB8]/10 text-[#7A9AB8]',
 };
 
+const PAYMENT_MODES = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'UPI', label: 'UPI' },
+  { value: 'CHEQUE', label: 'Cheque' },
+];
+
 const CREDIT_TYPES = ['EXTRA_DUTY', 'BONUS', 'SALARY'];
 const DEBIT_TYPES = ['ADVANCE_RECOVERY', 'PENALTY', 'FOOD', 'FUEL_ADVANCE', 'TOLL', 'MAINTENANCE', 'ADVANCE'];
 
@@ -72,6 +82,9 @@ export default function DriverLedgerPage() {
   const [viewTriggered, setViewTriggered] = useState(false);
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidEntry, setMarkPaidEntry] = useState<any>(null);
+  const [paymentInfoEntry, setPaymentInfoEntry] = useState<any>(null);
 
   const { data: driversRaw = [] } = useQuery({
     queryKey: ['drivers-list'],
@@ -96,7 +109,6 @@ export default function DriverLedgerPage() {
   const getQueryParams = () => {
     const params: Record<string, string> = {};
     if (selectedDriver) params.driverId = selectedDriver;
-
     switch (filterType) {
       case 'thisMonth':
         params.filterType = 'month';
@@ -108,10 +120,7 @@ export default function DriverLedgerPage() {
         params.month = String(month);
         params.year = String(year);
         break;
-      case 'last2':
-      case 'last3':
-      case 'last6':
-      case 'last12':
+      case 'last2': case 'last3': case 'last6': case 'last12':
         params.filterType = 'lastX';
         params.lastMonths = filterType.replace('last', '');
         break;
@@ -152,24 +161,30 @@ export default function DriverLedgerPage() {
 
   const summaryFromApi = ledgerData?.summary;
 
-  const { totalCredits, totalDebits, entryCount } = useMemo(() => {
+  const summary = useMemo(() => {
     if (summaryFromApi) {
       return {
         totalCredits: Number(summaryFromApi.totalCredits ?? 0),
         totalDebits: Number(summaryFromApi.totalDebits ?? 0),
+        paidCount: Number(summaryFromApi.paidCount ?? 0),
+        unpaidCount: Number(summaryFromApi.unpaidCount ?? 0),
+        paidTotal: Number(summaryFromApi.paidTotal ?? 0),
+        unpaidTotal: Number(summaryFromApi.unpaidTotal ?? 0),
         entryCount: Number(summaryFromApi.entryCount ?? entries.length),
       };
     }
-    let cr = 0, dr = 0;
+    let cr = 0, dr = 0, pc = 0, uc = 0, pt = 0, ut = 0;
     for (const e of entries) {
-      const amt = Number(e.amount ?? 0);
-      if (isCredit(String(e.type ?? ''), amt)) cr += amt;
+      const amt = Math.abs(Number(e.amount ?? 0));
+      if (isCredit(String(e.type ?? ''), Number(e.amount ?? 0))) cr += amt;
       else dr += amt;
+      if (e.isPaid) { pc++; pt += amt; }
+      else { uc++; ut += amt; }
     }
-    return { totalCredits: cr, totalDebits: dr, entryCount: entries.length };
+    return { totalCredits: cr, totalDebits: dr, paidCount: pc, unpaidCount: uc, paidTotal: pt, unpaidTotal: ut, entryCount: entries.length };
   }, [entries, summaryFromApi]);
 
-  const net = totalCredits - totalDebits;
+  const net = summary.totalCredits - summary.totalDebits;
 
   const createMut = useMutation({
     mutationFn: (payload: any) => api.post('/driver-ledger', payload),
@@ -179,6 +194,17 @@ export default function DriverLedgerPage() {
       setAddEntryOpen(false);
     },
     onError: () => toast.error('Failed to add entry'),
+  });
+
+  const markPaidMut = useMutation({
+    mutationFn: ({ id, ...payload }: any) => api.put(`/driver-ledger/${id}/mark-paid`, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['driver-ledger'] });
+      toast.success('Marked as paid');
+      setMarkPaidOpen(false);
+      setMarkPaidEntry(null);
+    },
+    onError: () => toast.error('Failed to mark as paid'),
   });
 
   useEffect(() => { setViewTriggered(false); }, [selectedDriver, filterType, month, year, financialYear, startDate, endDate]);
@@ -211,9 +237,7 @@ export default function DriverLedgerPage() {
 
   const quickFilter = (ft: string) => {
     setFilterType(ft);
-    setTimeout(() => {
-      if (selectedDriver) setViewTriggered(true);
-    }, 0);
+    setTimeout(() => { if (selectedDriver) setViewTriggered(true); }, 0);
   };
 
   return (
@@ -227,7 +251,6 @@ export default function DriverLedgerPage() {
       {/* Filters */}
       <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 space-y-3">
         <div className="flex flex-wrap gap-3 items-end">
-          {/* Driver */}
           <div className="flex-1 min-w-[180px]">
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Driver</label>
             <select className={inputClass} value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)}>
@@ -235,14 +258,12 @@ export default function DriverLedgerPage() {
               {driverOpts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
-          {/* Filter Type */}
           <div className="w-44">
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Period</label>
             <select className={inputClass} value={filterType} onChange={e => setFilterType(e.target.value)}>
               {FILTER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-          {/* Conditional inputs */}
           {filterType === 'month' && (
             <>
               <div className="w-36">
@@ -279,7 +300,6 @@ export default function DriverLedgerPage() {
               </div>
             </>
           )}
-          {/* Buttons */}
           <button onClick={handleView} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#0D2847] h-[38px]">
             <Search className="w-4 h-4" /> View
           </button>
@@ -287,8 +307,6 @@ export default function DriverLedgerPage() {
             <Download className="w-4 h-4" /> {pdfLoading ? 'Downloading...' : 'PDF'}
           </button>
         </div>
-
-        {/* Quick filter pills */}
         {selectedDriver && (
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -315,7 +333,7 @@ export default function DriverLedgerPage() {
               <div className="w-10 h-10 rounded-lg bg-[#16A34A]/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-[#16A34A]" /></div>
               <div>
                 <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Total Credits</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#16A34A]">{formatIndianCurrency(totalCredits)}</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#16A34A]">{formatIndianCurrency(summary.totalCredits)}</p>
               </div>
             </div>
           </div>
@@ -324,25 +342,27 @@ export default function DriverLedgerPage() {
               <div className="w-10 h-10 rounded-lg bg-[#DC2626]/15 flex items-center justify-center"><TrendingDown className="w-5 h-5 text-[#DC2626]" /></div>
               <div>
                 <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Total Debits</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#DC2626]">{formatIndianCurrency(totalDebits)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-[#1565C0] rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#1565C0]/15 flex items-center justify-center"><Banknote className="w-5 h-5 text-[#1565C0]" /></div>
-              <div>
-                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Net (Cr - Dr)</p>
-                <p className={`font-['Oswald'] text-xl font-bold ${net >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>{formatIndianCurrency(net)}</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#DC2626]">{formatIndianCurrency(summary.totalDebits)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#7A9AB8]/15 flex items-center justify-center"><Hash className="w-5 h-5 text-[#7A9AB8]" /></div>
+              <div className="w-10 h-10 rounded-lg bg-[#16A34A]/15 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-[#16A34A]" /></div>
               <div>
-                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Entries</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#0D2847]">{entryCount}</p>
+                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Paid Entries</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#16A34A]">{summary.paidCount}</p>
+                <p className="font-['Rajdhani'] text-xs text-[#7A9AB8]">{formatIndianCurrency(summary.paidTotal)} settled</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center"><Clock className="w-5 h-5 text-[#F59E0B]" /></div>
+              <div>
+                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Pending</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#F59E0B]">{summary.unpaidCount}</p>
+                <p className="font-['Rajdhani'] text-xs text-[#7A9AB8]">{formatIndianCurrency(summary.unpaidTotal)} for salary</p>
               </div>
             </div>
           </div>
@@ -374,8 +394,8 @@ export default function DriverLedgerPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#F4F6F8] border-b border-[#E0E8F0]">
-                    {['Date', 'Description', 'Type', 'Credit (₹)', 'Debit (₹)'].map(h => (
-                      <th key={h} className="text-left px-4 py-2.5 font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#1A4A7A]">{h}</th>
+                    {['Date', 'Description', 'Type', 'Credit (₹)', 'Debit (₹)', 'Status', 'Actions'].map(h => (
+                      <th key={h} className="text-left px-3 py-2.5 font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#1A4A7A]">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -384,26 +404,55 @@ export default function DriverLedgerPage() {
                     const amt = Number(e.amount ?? 0);
                     const credit = isCredit(String(e.type ?? ''), amt);
                     const typeStr = String(e.type ?? 'OTHER');
+                    const paid = e.isPaid === true;
                     return (
                       <tr key={String(e.id ?? idx)} className={idx % 2 === 1 ? 'bg-[#F8F9FA]' : ''}>
-                        <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847] whitespace-nowrap">{formatDate(e.date)}</td>
-                        <td className="px-4 py-2.5 font-['Rajdhani'] text-[#0D2847]">{typeof e.description === 'string' ? e.description : '—'}</td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] whitespace-nowrap">{formatDate(e.date)}</td>
+                        <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] max-w-[200px] truncate">{typeof e.description === 'string' ? e.description : '—'}</td>
+                        <td className="px-3 py-2.5">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${TYPE_BADGES[typeStr] ?? TYPE_BADGES.OTHER}`}>
                             {typeStr.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#16A34A] text-right tabular-nums">{credit ? formatIndianCurrency(amt) : ''}</td>
-                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#DC2626] text-right tabular-nums">{!credit ? formatIndianCurrency(Math.abs(amt)) : ''}</td>
+                        <td className="px-3 py-2.5 font-['Oswald'] font-semibold text-[#16A34A] text-right tabular-nums">{credit ? formatIndianCurrency(Math.abs(amt)) : ''}</td>
+                        <td className="px-3 py-2.5 font-['Oswald'] font-semibold text-[#DC2626] text-right tabular-nums">{!credit ? formatIndianCurrency(Math.abs(amt)) : ''}</td>
+                        <td className="px-3 py-2.5">
+                          {paid ? (
+                            <button
+                              onClick={() => setPaymentInfoEntry(e)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20 cursor-pointer"
+                            >
+                              <CheckCircle className="w-3 h-3" /> PAID
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase bg-[#F59E0B]/10 text-[#F59E0B]">
+                              <Clock className="w-3 h-3" /> PENDING
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {!paid && (
+                            <button
+                              onClick={() => { setMarkPaidEntry(e); setMarkPaidOpen(true); }}
+                              className="px-2 py-1 rounded text-[10px] font-['Barlow_Condensed'] font-semibold uppercase bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#F4F6F8] border-t-2 border-[#0D2847]">
-                    <td colSpan={3} className="px-4 py-3 font-['Barlow_Condensed'] text-sm font-bold uppercase tracking-wider text-[#0D2847]">Total</td>
-                    <td className="px-4 py-3 font-['Oswald'] text-base font-bold text-[#16A34A] text-right tabular-nums">{formatIndianCurrency(totalCredits)}</td>
-                    <td className="px-4 py-3 font-['Oswald'] text-base font-bold text-[#DC2626] text-right tabular-nums">{formatIndianCurrency(totalDebits)}</td>
+                    <td colSpan={3} className="px-3 py-3 font-['Barlow_Condensed'] text-sm font-bold uppercase tracking-wider text-[#0D2847]">Total</td>
+                    <td className="px-3 py-3 font-['Oswald'] text-base font-bold text-[#16A34A] text-right tabular-nums">{formatIndianCurrency(summary.totalCredits)}</td>
+                    <td className="px-3 py-3 font-['Oswald'] text-base font-bold text-[#DC2626] text-right tabular-nums">{formatIndianCurrency(summary.totalDebits)}</td>
+                    <td colSpan={2} className="px-3 py-3 font-['Oswald'] text-base font-bold text-right tabular-nums">
+                      <span className="text-[#7A9AB8] text-xs font-['Barlow_Condensed'] mr-2">NET</span>
+                      <span className={net >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{formatIndianCurrency(net)}</span>
+                    </td>
                   </tr>
                 </tfoot>
               </table>
@@ -418,6 +467,7 @@ export default function DriverLedgerPage() {
         </div>
       )}
 
+      {/* Add Entry Modal */}
       <AddEntryModal
         isOpen={addEntryOpen}
         onClose={() => setAddEntryOpen(false)}
@@ -425,37 +475,68 @@ export default function DriverLedgerPage() {
         onSave={(payload: any) => createMut.mutate(payload)}
         isPending={createMut.isPending}
       />
+
+      {/* Mark Entry Paid Modal */}
+      <Modal isOpen={markPaidOpen} onClose={() => { setMarkPaidOpen(false); setMarkPaidEntry(null); }} title="Mark Entry as Paid">
+        {markPaidEntry && (
+          <MarkPaidForm
+            entry={markPaidEntry}
+            onSave={(p: any) => markPaidMut.mutate({ id: markPaidEntry.id, ...p })}
+            isPending={markPaidMut.isPending}
+            onCancel={() => { setMarkPaidOpen(false); setMarkPaidEntry(null); }}
+          />
+        )}
+      </Modal>
+
+      {/* Payment Info Popover Modal */}
+      <Modal isOpen={!!paymentInfoEntry} onClose={() => setPaymentInfoEntry(null)} title="Payment Details">
+        {paymentInfoEntry && <PaymentInfo entry={paymentInfoEntry} />}
+      </Modal>
     </div>
   );
 }
 
+/* ── Add Entry Modal ── */
 function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
   isOpen: boolean; onClose: () => void; driverId: string; onSave: (p: any) => void; isPending: boolean;
 }) {
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY' as string, description: '', amount: '' });
-  const reset = () => setForm({ date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY', description: '', amount: '' });
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY' as string,
+    description: '', amount: '', isPaid: false, paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute',
+  });
+  const reset = () => setForm({
+    date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY',
+    description: '', amount: '', isPaid: false, paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute',
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const type = form.type;
     const isCr = CREDIT_TYPES.includes(type) || (type === 'OTHER' && Number(form.amount) >= 0);
     const d = new Date(form.date);
-    onSave({ driverId, date: form.date, type, category: type, description: form.description, amount: Number(form.amount), isCredit: isCr, month: d.getMonth() + 1, year: d.getFullYear() });
+    onSave({
+      driverId, date: form.date, type, category: type, description: form.description,
+      amount: Number(form.amount), isCredit: isCr, month: d.getMonth() + 1, year: d.getFullYear(),
+      isPaid: form.isPaid,
+      ...(form.isPaid ? { paidMode: form.paidMode, paidRef: form.paidRef || undefined, paidBy: form.paidBy } : {}),
+    });
     reset();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={() => { reset(); onClose(); }} title="Add Ledger Entry">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Date *</label>
-          <input type="date" className={inputClass} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
-        </div>
-        <div>
-          <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Type *</label>
-          <select className={inputClass} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-            {ENTRY_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Date *</label>
+            <input type="date" className={inputClass} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
+          </div>
+          <div>
+            <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Type *</label>
+            <select className={inputClass} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+              {ENTRY_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
         </div>
         <div>
           <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Description *</label>
@@ -465,11 +546,129 @@ function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
           <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Amount (₹) *</label>
           <input type="number" className={inputClass} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} min={1} step="0.01" required />
         </div>
+
+        {/* Already Paid Toggle */}
+        <div className="border border-[#E0E8F0] rounded-lg p-3 space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={form.isPaid} onChange={e => setForm(f => ({ ...f, isPaid: e.target.checked }))}
+              className="w-4 h-4 rounded border-[#E0E8F0] text-[#16A34A] focus:ring-[#16A34A]" />
+            <span className="font-['Barlow_Condensed'] text-sm font-semibold uppercase tracking-wider text-[#0D2847]">Already Paid?</span>
+            <span className="font-['Rajdhani'] text-xs text-[#7A9AB8]">Check if money was already exchanged</span>
+          </label>
+          {form.isPaid && (
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#E0E8F0]">
+              <div>
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Mode</label>
+                <select className={inputClass} value={form.paidMode} onChange={e => setForm(f => ({ ...f, paidMode: e.target.value }))}>
+                  {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Reference</label>
+                <input className={inputClass} value={form.paidRef} onChange={e => setForm(f => ({ ...f, paidRef: e.target.value }))} placeholder="UTR / Cheque No" />
+              </div>
+              <div className="col-span-2">
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Paid By</label>
+                <input className={inputClass} value={form.paidBy} onChange={e => setForm(f => ({ ...f, paidBy: e.target.value }))} />
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E8F0]">
           <button type="button" onClick={() => { reset(); onClose(); }} className="px-4 py-2 rounded-lg border border-[#E0E8F0] text-[#0D2847] font-['Barlow_Condensed'] uppercase tracking-wider text-sm">Cancel</button>
           <button type="submit" disabled={isPending} className="px-4 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">{isPending ? 'Saving...' : 'Add Entry'}</button>
         </div>
       </form>
     </Modal>
+  );
+}
+
+/* ── Mark Paid Form ── */
+function MarkPaidForm({ entry, onSave, isPending, onCancel }: {
+  entry: any; onSave: (p: any) => void; isPending: boolean; onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute', paidNotes: '' });
+  const amt = Math.abs(Number(entry.amount ?? 0));
+  const typeStr = String(entry.type ?? '').replace(/_/g, ' ');
+
+  return (
+    <form onSubmit={e => { e.preventDefault(); onSave(form); }} className="space-y-4">
+      <div className="border border-[#E0E8F0] rounded-lg p-3 bg-[#F4F6F8]">
+        <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">{typeStr} — {typeof entry.description === 'string' ? entry.description : ''}</p>
+        <p className="font-['Oswald'] text-lg font-bold text-[#0D2847] mt-1">{formatIndianCurrency(amt)}</p>
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Mode *</label>
+        <select className={inputClass} value={form.paidMode} onChange={e => setForm(f => ({ ...f, paidMode: e.target.value }))}>
+          {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Transaction Reference</label>
+        <input className={inputClass} value={form.paidRef} onChange={e => setForm(f => ({ ...f, paidRef: e.target.value }))} placeholder="UTR number, cheque no, UPI ref..." />
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Paid By *</label>
+        <input className={inputClass} value={form.paidBy} onChange={e => setForm(f => ({ ...f, paidBy: e.target.value }))} required />
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Notes</label>
+        <textarea className={inputClass} rows={2} value={form.paidNotes} onChange={e => setForm(f => ({ ...f, paidNotes: e.target.value }))} placeholder="Optional notes" />
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E8F0]">
+        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-[#E0E8F0] text-[#0D2847] font-['Barlow_Condensed'] uppercase tracking-wider text-sm">Cancel</button>
+        <button type="submit" disabled={isPending} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#16A34A] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">
+          <CheckCircle className="w-3.5 h-3.5" /> {isPending ? 'Saving...' : 'Confirm Payment'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ── Payment Info Display ── */
+function PaymentInfo({ entry }: { entry: any }) {
+  return (
+    <div className="space-y-3">
+      <div className="border border-[#16A34A]/30 bg-[#16A34A]/5 rounded-lg p-4 space-y-2">
+        <div className="flex items-center gap-2 mb-2">
+          <CreditCard className="w-4 h-4 text-[#16A34A]" />
+          <span className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#16A34A] text-sm">Payment Details</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <span className="font-['Rajdhani'] text-[#7A9AB8]">Amount</span>
+          <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(Math.abs(Number(entry.amount ?? 0)))}</span>
+          <span className="font-['Rajdhani'] text-[#7A9AB8]">Type</span>
+          <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(entry.type ?? '').replace(/_/g, ' ')}</span>
+          {entry.paidDate && (
+            <>
+              <span className="font-['Rajdhani'] text-[#7A9AB8]">Paid on</span>
+              <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{formatDate(entry.paidDate)}</span>
+            </>
+          )}
+          {entry.paidMode && (
+            <>
+              <span className="font-['Rajdhani'] text-[#7A9AB8]">Mode</span>
+              <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(entry.paidMode).replace(/_/g, ' ')}</span>
+            </>
+          )}
+          {entry.paidRef && (
+            <>
+              <span className="font-['Rajdhani'] text-[#7A9AB8]">Reference</span>
+              <span className="font-mono text-xs text-[#0D2847]">{String(entry.paidRef)}</span>
+            </>
+          )}
+          {entry.paidBy && (
+            <>
+              <span className="font-['Rajdhani'] text-[#7A9AB8]">Paid By</span>
+              <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(entry.paidBy)}</span>
+            </>
+          )}
+        </div>
+        {entry.paidNotes && (
+          <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-2 pt-2 border-t border-[#16A34A]/20">{String(entry.paidNotes)}</p>
+        )}
+      </div>
+    </div>
   );
 }
