@@ -7,7 +7,7 @@ import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Wallet, Users, CheckCircle, Calculator, Eye, CircleDollarSign } from 'lucide-react';
+import { Wallet, Users, CheckCircle, Calculator, Eye, CircleDollarSign, CreditCard, IndianRupee } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const STATUS_BADGES: Record<string, string> = {
@@ -17,6 +17,13 @@ const STATUS_BADGES: Record<string, string> = {
   PAID: 'bg-[#16A34A]/10 text-[#16A34A]',
   PARTIAL: 'bg-[#F59E0B]/10 text-[#F59E0B]',
 };
+
+const PAYMENT_MODES = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'UPI', label: 'UPI' },
+  { value: 'CHEQUE', label: 'Cheque' },
+];
 
 const inputClass = 'w-full rounded-lg border border-[#E0E8F0] px-3 py-2 text-[#0D2847] focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/20 font-["Rajdhani"] text-sm';
 
@@ -47,7 +54,7 @@ export default function SalaryPage() {
       const paidAmt = Number(r.paidAmount ?? 0);
       totalPayroll += net;
       paid += paidAmt;
-      if (r.status !== 'PAID') pending += net - paidAmt;
+      if (String(r.status ?? '') !== 'PAID') pending += net - paidAmt;
     }
     return { totalPayroll, paid, pending, count: records.length };
   }, [records]);
@@ -77,6 +84,7 @@ export default function SalaryPage() {
       qc.invalidateQueries({ queryKey: ['driver-salary'] });
       toast.success('Payment recorded');
       setPayOpen(false);
+      setPayRecord(null);
     },
     onError: () => toast.error('Failed to record payment'),
   });
@@ -153,34 +161,38 @@ export default function SalaryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
-                {records.map((r: any) => (
-                  <tr key={r.id} className="hover:bg-[#F4F6F8]/50">
-                    <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">{typeof r.driver === 'object' && r.driver ? String(r.driver.name ?? '—') : '—'}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">{typeof r.driver === 'object' && r.driver ? String(r.driver.employeeCode ?? '—') : '—'}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] text-[#0D2847]">{formatIndianCurrency(Number(r.baseSalary ?? 0))}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.totalAdvances ?? 0))}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] text-[#1565C0]">{formatIndianCurrency(Number(r.extraDutyPay ?? 0))}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] text-[#16A34A]">{formatIndianCurrency(Number(r.bonuses ?? 0))}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.penalties ?? 0))}</td>
-                    <td className="px-3 py-2.5 font-['Oswald'] font-bold text-[#0D2847]">{formatIndianCurrency(Number(r.netPayable ?? 0))}</td>
-                    <td className="px-3 py-2.5">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[r.status] ?? STATUS_BADGES.PENDING}`}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => { setDetailRecord(r); setDetailOpen(true); }} className="p-1.5 rounded hover:bg-[#42A5F5]/10 text-[#42A5F5]" title="View Details"><Eye className="w-3.5 h-3.5" /></button>
-                        {(r.status === 'CALCULATED' || r.status === 'PENDING') && (
-                          <button onClick={() => approveMut.mutate(r.id)} disabled={approveMut.isPending} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
-                        )}
-                        {r.status !== 'PAID' && (
-                          <button onClick={() => { setPayRecord(r); setPayOpen(true); }} className="p-1.5 rounded hover:bg-[#0D2847]/10 text-[#0D2847]" title="Mark Paid"><CircleDollarSign className="w-3.5 h-3.5" /></button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {records.map((r: any) => {
+                  const st = String(r.status ?? 'PENDING');
+                  const isPaid = st === 'PAID';
+                  return (
+                    <tr key={r.id} className="hover:bg-[#F4F6F8]/50">
+                      <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">{typeof r.driver === 'object' && r.driver ? String(r.driver.name ?? '—') : '—'}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">{typeof r.driver === 'object' && r.driver ? String(r.driver.employeeCode ?? '—') : '—'}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] text-[#0D2847]">{formatIndianCurrency(Number(r.baseSalary ?? 0))}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.totalAdvances ?? 0))}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] text-[#1565C0]">{formatIndianCurrency(Number(r.extraDutyPay ?? 0))}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] text-[#16A34A]">{formatIndianCurrency(Number(r.bonuses ?? 0))}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.penalties ?? 0))}</td>
+                      <td className="px-3 py-2.5 font-['Oswald'] font-bold text-[#0D2847]">{formatIndianCurrency(Number(r.netPayable ?? 0))}</td>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[st] ?? STATUS_BADGES.PENDING}`}>
+                          {st}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { setDetailRecord(r); setDetailOpen(true); }} className="p-1.5 rounded hover:bg-[#42A5F5]/10 text-[#42A5F5]" title="View Details"><Eye className="w-3.5 h-3.5" /></button>
+                          {(st === 'CALCULATED' || st === 'PENDING') && (
+                            <button onClick={() => approveMut.mutate(r.id)} disabled={approveMut.isPending} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
+                          )}
+                          {!isPaid && (
+                            <button onClick={() => { setPayRecord(r); setPayOpen(true); }} className="p-1.5 rounded hover:bg-[#16A34A]/10 text-[#16A34A]" title="Mark as Paid"><CircleDollarSign className="w-3.5 h-3.5" /></button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -193,7 +205,7 @@ export default function SalaryPage() {
       </Modal>
 
       {/* Pay Modal */}
-      <Modal isOpen={payOpen} onClose={() => { setPayOpen(false); setPayRecord(null); }} title="Record Payment">
+      <Modal isOpen={payOpen} onClose={() => { setPayOpen(false); setPayRecord(null); }} title="Mark as Paid">
         {payRecord && (
           <PayForm
             record={payRecord}
@@ -210,6 +222,8 @@ export default function SalaryPage() {
 function SalaryDetail({ record }: { record: any }) {
   const net = Number(record.netPayable ?? 0);
   const paid = Number(record.paidAmount ?? 0);
+  const st = String(record.status ?? '');
+  const isPaid = st === 'PAID';
   const rows = [
     { label: 'Base Salary', value: Number(record.baseSalary ?? 0), sign: '' },
     { label: 'Total Advances', value: Number(record.totalAdvances ?? 0), sign: '(-)' },
@@ -230,14 +244,15 @@ function SalaryDetail({ record }: { record: any }) {
           <p className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.driver?.name ?? 'Driver')}</p>
           <p className="font-mono text-xs text-[#42A5F5]">{String(record.driver?.employeeCode ?? '')}</p>
         </div>
-        <span className={`ml-auto inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[String(record.status ?? '')] ?? ''}`}>
-          {String(record.status ?? '')}
+        <span className={`ml-auto inline-flex px-2 py-0.5 rounded-full text-[10px] font-['Barlow_Condensed'] font-semibold uppercase ${STATUS_BADGES[st] ?? ''}`}>
+          {st}
         </span>
       </div>
       <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">
         Period: {new Date(2000, Number(record.month ?? 1) - 1).toLocaleString('default', { month: 'long' })} {String(record.year ?? '')}
       </p>
 
+      {/* Breakdown */}
       <div className="border border-[#E0E8F0] rounded-lg divide-y divide-[#E0E8F0]">
         {rows.map(r => (
           <div key={r.label} className="flex justify-between px-4 py-2 font-['Rajdhani'] text-sm">
@@ -263,7 +278,46 @@ function SalaryDetail({ record }: { record: any }) {
         )}
       </div>
 
-      {record.paidDate && (
+      {/* Payment Info (when paid) */}
+      {isPaid && (
+        <div className="border border-[#16A34A]/30 bg-[#16A34A]/5 rounded-lg p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <CreditCard className="w-4 h-4 text-[#16A34A]" />
+            <span className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#16A34A] text-sm">Payment Details</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            {record.paidDate && (
+              <>
+                <span className="font-['Rajdhani'] text-[#7A9AB8]">Paid on</span>
+                <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{formatDate(record.paidDate)}</span>
+              </>
+            )}
+            {record.paymentMode && (
+              <>
+                <span className="font-['Rajdhani'] text-[#7A9AB8]">Mode</span>
+                <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.paymentMode ?? '').replace(/_/g, ' ')}</span>
+              </>
+            )}
+            {record.transactionRef && (
+              <>
+                <span className="font-['Rajdhani'] text-[#7A9AB8]">Ref</span>
+                <span className="font-mono text-xs text-[#0D2847]">{String(record.transactionRef)}</span>
+              </>
+            )}
+            {record.paidBy && (
+              <>
+                <span className="font-['Rajdhani'] text-[#7A9AB8]">By</span>
+                <span className="font-['Rajdhani'] font-semibold text-[#0D2847]">{String(record.paidBy)}</span>
+              </>
+            )}
+          </div>
+          {record.notes && (
+            <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-2 pt-2 border-t border-[#16A34A]/20">{String(record.notes)}</p>
+          )}
+        </div>
+      )}
+
+      {!isPaid && record.paidDate && (
         <p className="font-['Rajdhani'] text-xs text-[#7A9AB8]">Last payment: {formatDate(record.paidDate)}</p>
       )}
     </div>
@@ -275,22 +329,58 @@ function PayForm({ record, onSave, isPending, onCancel }: any) {
   const [form, setForm] = useState({
     paidAmount: String(Math.max(0, remaining)),
     paidDate: new Date().toISOString().slice(0, 10),
+    paymentMode: 'BANK_TRANSFER',
+    transactionRef: '',
+    paidBy: 'Ganesh Kute',
     notes: '',
   });
 
   return (
-    <form onSubmit={e => { e.preventDefault(); onSave({ paidAmount: Number(form.paidAmount), paidDate: form.paidDate, notes: form.notes }); }} className="space-y-4">
-      <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">
-        {String(record.driver?.name ?? 'Driver')} — Net Payable: <span className="font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(Number(record.netPayable ?? 0))}</span>
-        {Number(record.paidAmount ?? 0) > 0 && <> (Already paid: {formatIndianCurrency(Number(record.paidAmount))})</>}
-      </p>
+    <form onSubmit={e => {
+      e.preventDefault();
+      onSave({
+        paidAmount: Number(form.paidAmount),
+        paidDate: form.paidDate,
+        paymentMode: form.paymentMode,
+        transactionRef: form.transactionRef || undefined,
+        paidBy: form.paidBy,
+        notes: form.notes || undefined,
+      });
+    }} className="space-y-4">
+      <div className="border border-[#E0E8F0] rounded-lg p-3 bg-[#F4F6F8]">
+        <p className="font-['Rajdhani'] text-sm text-[#7A9AB8]">
+          {String(record.driver?.name ?? 'Driver')}
+        </p>
+        <div className="flex justify-between items-baseline mt-1">
+          <span className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#1A4A7A]">Net Payable</span>
+          <span className="font-['Oswald'] font-semibold text-lg text-[#0D2847]">{formatIndianCurrency(Number(record.netPayable ?? 0))}</span>
+        </div>
+        {Number(record.paidAmount ?? 0) > 0 && (
+          <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-1">Already paid: {formatIndianCurrency(Number(record.paidAmount))}</p>
+        )}
+      </div>
+
       <div>
         <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Amount (₹) *</label>
         <input type="number" className={inputClass} value={form.paidAmount} onChange={e => setForm(f => ({ ...f, paidAmount: e.target.value }))} min={1} required />
       </div>
       <div>
-        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Date</label>
-        <input type="date" className={inputClass} value={form.paidDate} onChange={e => setForm(f => ({ ...f, paidDate: e.target.value }))} />
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Date *</label>
+        <input type="date" className={inputClass} value={form.paidDate} onChange={e => setForm(f => ({ ...f, paidDate: e.target.value }))} required />
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Payment Mode *</label>
+        <select className={inputClass} value={form.paymentMode} onChange={e => setForm(f => ({ ...f, paymentMode: e.target.value }))}>
+          {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Transaction Reference</label>
+        <input className={inputClass} value={form.transactionRef} onChange={e => setForm(f => ({ ...f, transactionRef: e.target.value }))} placeholder="UTR number, cheque no, UPI ref..." />
+      </div>
+      <div>
+        <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Paid By *</label>
+        <input className={inputClass} value={form.paidBy} onChange={e => setForm(f => ({ ...f, paidBy: e.target.value }))} required />
       </div>
       <div>
         <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Notes</label>
@@ -298,7 +388,10 @@ function PayForm({ record, onSave, isPending, onCancel }: any) {
       </div>
       <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E8F0]">
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-[#E0E8F0] text-[#0D2847] font-['Barlow_Condensed'] uppercase tracking-wider text-sm">Cancel</button>
-        <button type="submit" disabled={isPending} className="px-4 py-2 rounded-lg bg-[#16A34A] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">{isPending ? 'Saving...' : 'Record Payment'}</button>
+        <button type="submit" disabled={isPending} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#16A34A] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">
+          <IndianRupee className="w-3.5 h-3.5" />
+          {isPending ? 'Saving...' : 'Confirm Payment'}
+        </button>
       </div>
     </form>
   );

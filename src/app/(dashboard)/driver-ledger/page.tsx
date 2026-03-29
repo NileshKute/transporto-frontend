@@ -7,7 +7,7 @@ import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { BookOpen, Plus, Download, Search, TrendingUp, TrendingDown, Banknote, Wallet } from 'lucide-react';
+import { BookOpen, Plus, Download, Search, TrendingUp, TrendingDown, Banknote, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MONTHS = [
@@ -17,7 +17,19 @@ const MONTHS = [
   { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' },
 ];
 
-const YEARS = [2024, 2025, 2026];
+const FILTER_OPTIONS = [
+  { value: 'thisMonth', label: 'This Month' },
+  { value: 'month', label: 'Single Month' },
+  { value: 'last2', label: 'Last 2 Months' },
+  { value: 'last3', label: 'Last 3 Months' },
+  { value: 'last6', label: 'Last 6 Months' },
+  { value: 'last12', label: 'Last 12 Months' },
+  { value: 'year', label: 'Financial Year' },
+  { value: 'custom', label: 'Custom Range' },
+  { value: 'all', label: 'All Time' },
+];
+
+const FY_OPTIONS = ['2023-24', '2024-25', '2025-26'];
 
 const ENTRY_TYPES = ['EXTRA_DUTY', 'ADVANCE_RECOVERY', 'BONUS', 'OTHER'] as const;
 
@@ -51,8 +63,12 @@ export default function DriverLedgerPage() {
   const now = new Date();
 
   const [selectedDriver, setSelectedDriver] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [filterType, setFilterType] = useState('thisMonth');
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [financialYear, setFinancialYear] = useState('2025-26');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [viewTriggered, setViewTriggered] = useState(false);
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -76,187 +92,257 @@ export default function DriverLedgerPage() {
   [driversRaw]);
 
   const selectedDriverName = driverOpts.find(d => d.id === selectedDriver)?.rawName || 'Driver';
-  const monthName = MONTHS.find(m => m.value === selectedMonth)?.label || '';
+
+  const getQueryParams = () => {
+    const params: Record<string, string> = {};
+    if (selectedDriver) params.driverId = selectedDriver;
+
+    switch (filterType) {
+      case 'thisMonth':
+        params.filterType = 'month';
+        params.month = String(now.getMonth() + 1);
+        params.year = String(now.getFullYear());
+        break;
+      case 'month':
+        params.filterType = 'month';
+        params.month = String(month);
+        params.year = String(year);
+        break;
+      case 'last2':
+      case 'last3':
+      case 'last6':
+      case 'last12':
+        params.filterType = 'lastX';
+        params.lastMonths = filterType.replace('last', '');
+        break;
+      case 'year':
+        params.filterType = 'year';
+        params.financialYear = financialYear;
+        break;
+      case 'custom':
+        params.filterType = 'custom';
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        break;
+      case 'all':
+        params.filterType = 'all';
+        break;
+    }
+    return params;
+  };
 
   const canFetch = !!selectedDriver && viewTriggered;
+  const queryParams = getQueryParams();
 
-  const { data: ledgerData, isLoading: ledgerLoading } = useQuery({
-    queryKey: ['driver-ledger', selectedDriver, selectedMonth, selectedYear],
+  const { data: ledgerData, isLoading } = useQuery({
+    queryKey: ['driver-ledger', queryParams],
     queryFn: async () => {
-      const r = await api.get('/driver-ledger', {
-        params: { driverId: selectedDriver, month: selectedMonth, year: selectedYear, limit: 200 },
-      });
+      const r = await api.get('/driver-ledger', { params: { ...queryParams, limit: 500 } });
       return r.data;
     },
     enabled: canFetch,
   });
 
-  const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['driver-summary', selectedDriver, selectedMonth, selectedYear],
-    queryFn: async () => {
-      const r = await api.get(`/driver-ledger/summary/${selectedDriver}`, {
-        params: { month: selectedMonth, year: selectedYear },
-      });
-      return r.data;
-    },
-    enabled: canFetch,
-  });
+  const entries: any[] = useMemo(() => {
+    if (Array.isArray(ledgerData?.entries)) return ledgerData.entries;
+    if (Array.isArray(ledgerData?.data)) return ledgerData.data;
+    if (Array.isArray(ledgerData)) return ledgerData;
+    return [];
+  }, [ledgerData]);
 
-  const entries: any[] = Array.isArray(ledgerData?.data) ? ledgerData.data : (Array.isArray(ledgerData) ? ledgerData : []);
+  const summaryFromApi = ledgerData?.summary;
 
-  const { totalCredits, totalDebits } = useMemo(() => {
+  const { totalCredits, totalDebits, entryCount } = useMemo(() => {
+    if (summaryFromApi) {
+      return {
+        totalCredits: Number(summaryFromApi.totalCredits ?? 0),
+        totalDebits: Number(summaryFromApi.totalDebits ?? 0),
+        entryCount: Number(summaryFromApi.entryCount ?? entries.length),
+      };
+    }
     let cr = 0, dr = 0;
     for (const e of entries) {
       const amt = Number(e.amount ?? 0);
       if (isCredit(String(e.type ?? ''), amt)) cr += amt;
       else dr += amt;
     }
-    return { totalCredits: cr, totalDebits: dr };
-  }, [entries]);
+    return { totalCredits: cr, totalDebits: dr, entryCount: entries.length };
+  }, [entries, summaryFromApi]);
+
+  const net = totalCredits - totalDebits;
 
   const createMut = useMutation({
     mutationFn: (payload: any) => api.post('/driver-ledger', payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driver-ledger'] });
-      qc.invalidateQueries({ queryKey: ['driver-summary'] });
       toast.success('Entry added');
       setAddEntryOpen(false);
     },
     onError: () => toast.error('Failed to add entry'),
   });
 
-  const handleViewLedger = () => {
-    if (!selectedDriver) {
-      toast.error('Please select a driver');
-      return;
-    }
+  useEffect(() => { setViewTriggered(false); }, [selectedDriver, filterType, month, year, financialYear, startDate, endDate]);
+
+  const handleView = () => {
+    if (!selectedDriver) { toast.error('Please select a driver'); return; }
+    if (filterType === 'custom' && (!startDate || !endDate)) { toast.error('Select start and end dates'); return; }
     setViewTriggered(true);
   };
 
-  useEffect(() => {
-    setViewTriggered(false);
-  }, [selectedDriver, selectedMonth, selectedYear]);
-
   const downloadPDF = async () => {
-    if (!selectedDriver) {
-      toast.error('Please select a driver');
-      return;
-    }
+    if (!selectedDriver) { toast.error('Please select a driver'); return; }
     setPdfLoading(true);
     try {
-      const response = await api.post(
-        `/driver-ledger/pdf/${selectedDriver}?month=${selectedMonth}&year=${selectedYear}`,
-        {},
-        { responseType: 'blob' },
-      );
+      const params = getQueryParams();
+      const qs = new URLSearchParams(params).toString();
+      const response = await api.post(`/driver-ledger/pdf/${selectedDriver}?${qs}`, {}, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Ledger_${selectedDriverName}_${monthName}_${selectedYear}.pdf`);
+      link.setAttribute('download', `Ledger_${selectedDriverName.replace(/\s/g, '_')}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('PDF downloaded');
-    } catch {
-      toast.error('Failed to download PDF');
-    } finally {
-      setPdfLoading(false);
-    }
+    } catch { toast.error('Failed to download PDF'); }
+    finally { setPdfLoading(false); }
   };
 
-  const isLoading = ledgerLoading || summaryLoading;
+  const quickFilter = (ft: string) => {
+    setFilterType(ft);
+    setTimeout(() => {
+      if (selectedDriver) setViewTriggered(true);
+    }, 0);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="font-['Oswald'] text-2xl font-bold text-[#0D2847] tracking-wide">DRIVER LEDGER</h1>
-        <p className="font-['Rajdhani'] text-sm text-[#7A9AB8] mt-0.5">Monthly driver accounting — extra duty, advances, bonuses</p>
+        <p className="font-['Rajdhani'] text-sm text-[#7A9AB8] mt-0.5">Daily transactions — extra duty, advance recovery, bonus, expenses</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
+      <div className="bg-white border border-[#E0E8F0] rounded-xl p-4 space-y-3">
         <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px]">
+          {/* Driver */}
+          <div className="flex-1 min-w-[180px]">
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Driver</label>
             <select className={inputClass} value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)}>
               <option value="">Select Driver</option>
               {driverOpts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
-          <div className="w-40">
-            <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Month</label>
-            <select className={inputClass} value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
-              {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          {/* Filter Type */}
+          <div className="w-44">
+            <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Period</label>
+            <select className={inputClass} value={filterType} onChange={e => setFilterType(e.target.value)}>
+              {FILTER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-          <div className="w-28">
-            <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Year</label>
-            <select className={inputClass} value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}>
-              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <button
-            onClick={handleViewLedger}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#0D2847] h-[38px]"
-          >
-            <Search className="w-4 h-4" /> View Ledger
+          {/* Conditional inputs */}
+          {filterType === 'month' && (
+            <>
+              <div className="w-36">
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Month</label>
+                <select className={inputClass} value={month} onChange={e => setMonth(Number(e.target.value))}>
+                  {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <div className="w-24">
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Year</label>
+                <select className={inputClass} value={year} onChange={e => setYear(Number(e.target.value))}>
+                  {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+          {filterType === 'year' && (
+            <div className="w-36">
+              <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Financial Year</label>
+              <select className={inputClass} value={financialYear} onChange={e => setFinancialYear(e.target.value)}>
+                {FY_OPTIONS.map(fy => <option key={fy} value={fy}>FY {fy}</option>)}
+              </select>
+            </div>
+          )}
+          {filterType === 'custom' && (
+            <>
+              <div className="w-40">
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Start Date</label>
+                <input type="date" className={inputClass} value={startDate} onChange={e => setStartDate(e.target.value)} />
+              </div>
+              <div className="w-40">
+                <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">End Date</label>
+                <input type="date" className={inputClass} value={endDate} onChange={e => setEndDate(e.target.value)} />
+              </div>
+            </>
+          )}
+          {/* Buttons */}
+          <button onClick={handleView} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#0D2847] h-[38px]">
+            <Search className="w-4 h-4" /> View
           </button>
-          <button
-            onClick={downloadPDF}
-            disabled={!selectedDriver || pdfLoading}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#1A4A7A] disabled:opacity-50 h-[38px]"
-          >
-            <Download className="w-4 h-4" /> {pdfLoading ? 'Downloading...' : 'Download PDF'}
+          <button onClick={downloadPDF} disabled={!selectedDriver || pdfLoading} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#1A4A7A] disabled:opacity-50 h-[38px]">
+            <Download className="w-4 h-4" /> {pdfLoading ? 'Downloading...' : 'PDF'}
           </button>
         </div>
+
+        {/* Quick filter pills */}
+        {selectedDriver && (
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { ft: 'thisMonth', label: 'This Month' },
+              { ft: 'last3', label: 'Last 3M' },
+              { ft: 'last6', label: 'Last 6M' },
+              { ft: 'year', label: `FY ${financialYear}` },
+              { ft: 'all', label: 'All' },
+            ].map(p => (
+              <button key={p.ft} onClick={() => quickFilter(p.ft)}
+                className={`px-3 py-1 rounded-full text-xs font-['Barlow_Condensed'] uppercase tracking-wider transition-colors ${
+                  filterType === p.ft ? 'bg-[#1565C0] text-white' : 'bg-[#F4F6F8] text-[#1A4A7A] hover:bg-[#E0E8F0]'
+                }`}>{p.label}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
-      {canFetch && summary && (
+      {canFetch && !isLoading && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#16A34A]/15 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-[#16A34A]" />
-              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#16A34A]/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-[#16A34A]" /></div>
               <div>
                 <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Total Credits</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#16A34A]">{formatIndianCurrency(Number(summary.totalCredits ?? 0))}</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#16A34A]">{formatIndianCurrency(totalCredits)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#DC2626]/15 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-[#DC2626]" />
-              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#DC2626]/15 flex items-center justify-center"><TrendingDown className="w-5 h-5 text-[#DC2626]" /></div>
               <div>
                 <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Total Debits</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#DC2626]">{formatIndianCurrency(Number(summary.totalDebits ?? 0))}</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#DC2626]">{formatIndianCurrency(totalDebits)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border-2 border-[#1565C0] rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#1565C0]/15 flex items-center justify-center"><Banknote className="w-5 h-5 text-[#1565C0]" /></div>
+              <div>
+                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Net (Cr - Dr)</p>
+                <p className={`font-['Oswald'] text-xl font-bold ${net >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>{formatIndianCurrency(net)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white border border-[#E0E8F0] rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#1565C0]/15 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-[#1565C0]" />
-              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#7A9AB8]/15 flex items-center justify-center"><Hash className="w-5 h-5 text-[#7A9AB8]" /></div>
               <div>
-                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Base Salary</p>
-                <p className="font-['Oswald'] text-lg font-bold text-[#1565C0]">{formatIndianCurrency(Number(summary.baseSalary ?? 0))}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-[#0D2847] rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#0D2847]/15 flex items-center justify-center">
-                <Banknote className="w-5 h-5 text-[#0D2847]" />
-              </div>
-              <div>
-                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Net Payable</p>
-                <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{formatIndianCurrency(Number(summary.netPayable ?? 0))}</p>
+                <p className="font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8]">Entries</p>
+                <p className="font-['Oswald'] text-lg font-bold text-[#0D2847]">{entryCount}</p>
               </div>
             </div>
           </div>
@@ -270,14 +356,11 @@ export default function DriverLedgerPage() {
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#42A5F5]" />
               <span className="font-['Barlow_Condensed'] font-semibold uppercase tracking-wider text-[#1A4A7A] text-sm">
-                Ledger — {selectedDriverName} — {monthName} {selectedYear}
+                Ledger — {selectedDriverName}
               </span>
             </div>
-            <button
-              onClick={() => setAddEntryOpen(true)}
-              disabled={!selectedDriver}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-xs hover:bg-[#0D2847] disabled:opacity-50"
-            >
+            <button onClick={() => setAddEntryOpen(true)} disabled={!selectedDriver}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-xs hover:bg-[#0D2847] disabled:opacity-50">
               <Plus className="w-3.5 h-3.5" /> Add Entry
             </button>
           </div>
@@ -310,12 +393,8 @@ export default function DriverLedgerPage() {
                             {typeStr.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#16A34A] text-right tabular-nums">
-                          {credit ? formatIndianCurrency(amt) : ''}
-                        </td>
-                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#DC2626] text-right tabular-nums">
-                          {!credit ? formatIndianCurrency(Math.abs(amt)) : ''}
-                        </td>
+                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#16A34A] text-right tabular-nums">{credit ? formatIndianCurrency(amt) : ''}</td>
+                        <td className="px-4 py-2.5 font-['Oswald'] font-semibold text-[#DC2626] text-right tabular-nums">{!credit ? formatIndianCurrency(Math.abs(amt)) : ''}</td>
                       </tr>
                     );
                   })}
@@ -333,23 +412,16 @@ export default function DriverLedgerPage() {
         </div>
       )}
 
-      {/* Empty state when no driver selected */}
       {!canFetch && (
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-12">
-          <EmptyState
-            message="Select a driver and click View Ledger"
-            description="Choose a driver, month, and year from the filters above to view their ledger"
-          />
+          <EmptyState message="Select a driver and click View" description="Choose a driver and period from the filters above" />
         </div>
       )}
 
-      {/* Add Entry Modal */}
       <AddEntryModal
         isOpen={addEntryOpen}
         onClose={() => setAddEntryOpen(false)}
         driverId={selectedDriver}
-        month={selectedMonth}
-        year={selectedYear}
         onSave={(payload: any) => createMut.mutate(payload)}
         isPending={createMut.isPending}
       />
@@ -357,46 +429,18 @@ export default function DriverLedgerPage() {
   );
 }
 
-/* ───────────────── Add Entry Modal ─────────────── */
-
-function AddEntryModal({ isOpen, onClose, driverId, month, year, onSave, isPending }: {
-  isOpen: boolean;
-  onClose: () => void;
-  driverId: string;
-  month: number;
-  year: number;
-  onSave: (payload: any) => void;
-  isPending: boolean;
+function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
+  isOpen: boolean; onClose: () => void; driverId: string; onSave: (p: any) => void; isPending: boolean;
 }) {
-  const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    type: 'EXTRA_DUTY' as string,
-    description: '',
-    amount: '',
-  });
-
-  const reset = () => setForm({
-    date: new Date().toISOString().slice(0, 10),
-    type: 'EXTRA_DUTY',
-    description: '',
-    amount: '',
-  });
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY' as string, description: '', amount: '' });
+  const reset = () => setForm({ date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY', description: '', amount: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const type = form.type;
     const isCr = CREDIT_TYPES.includes(type) || (type === 'OTHER' && Number(form.amount) >= 0);
-    onSave({
-      driverId,
-      date: form.date,
-      type,
-      category: type,
-      description: form.description,
-      amount: Number(form.amount),
-      isCredit: isCr,
-      month,
-      year,
-    });
+    const d = new Date(form.date);
+    onSave({ driverId, date: form.date, type, category: type, description: form.description, amount: Number(form.amount), isCredit: isCr, month: d.getMonth() + 1, year: d.getFullYear() });
     reset();
   };
 
@@ -423,9 +467,7 @@ function AddEntryModal({ isOpen, onClose, driverId, month, year, onSave, isPendi
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E8F0]">
           <button type="button" onClick={() => { reset(); onClose(); }} className="px-4 py-2 rounded-lg border border-[#E0E8F0] text-[#0D2847] font-['Barlow_Condensed'] uppercase tracking-wider text-sm">Cancel</button>
-          <button type="submit" disabled={isPending} className="px-4 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">
-            {isPending ? 'Saving...' : 'Add Entry'}
-          </button>
+          <button type="submit" disabled={isPending} className="px-4 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm disabled:opacity-50">{isPending ? 'Saving...' : 'Add Entry'}</button>
         </div>
       </form>
     </Modal>
