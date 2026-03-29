@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
@@ -85,6 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useIdleTimeout(120000);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
