@@ -169,7 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div>
               <div className="font-['Oswald'] text-sm font-bold text-white tracking-wider">G K ENTERPRISE</div>
-              <div className="font-['Barlow_Condensed'] text-[10px] text-[#42A5F5] tracking-[3px] uppercase">Cold Chain Logistics</div>
+              <div className="font-['Barlow_Condensed'] text-[10px] text-[#42A5F5] tracking-[3px] uppercase">COLD CHAIN LOGISTICS</div>
             </div>
             <button className="ml-auto lg:hidden text-[#64B5F6] hover:text-white" onClick={() => setSidebarOpen(false)}>
               <X size={20} />

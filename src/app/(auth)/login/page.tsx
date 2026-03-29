@@ -58,7 +58,7 @@ export default function LoginPage() {
               </div>
               <h1 className="font-['Oswald'] text-2xl font-bold text-white tracking-wider">G K ENTERPRISE</h1>
             </div>
-            <p className="font-['Barlow_Condensed'] text-[#42A5F5] tracking-[4px] uppercase">Cold Chain Logistics</p>
+            <p className="font-['Barlow_Condensed'] text-[#42A5F5] tracking-[4px] uppercase">COLD CHAIN LOGISTICS</p>
           </div>
 
           <div className="space-y-6">

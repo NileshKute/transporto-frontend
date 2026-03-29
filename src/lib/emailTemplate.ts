@@ -27,7 +27,7 @@ export function brandedEmailTemplate(content: string, _subject?: string): string
       <!-- Footer -->
       <div style="background:#F4F6F8;padding:20px;border-top:1px solid #E0E8F0;text-align:center;">
         <p style="color:#7A9AB8;font-size:11px;margin:0;">
-          G K Enterprise | Cold Chain Logistics | Since 2019<br>
+          G K Enterprise | COLD CHAIN LOGISTICS | Since 2019<br>
           Shree Ganesh CHS, 402, Plot 151, Phase II, Navde, Taloja, Panvel, Maharashtra 410208<br>
           +91 9324540988 | ganesh@gkenterprise.in | www.gkenterprise.in
         </p>
