@@ -1,34 +1,48 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { getUser } from '@/lib/auth';
+import { getPermissionCheckCache } from '@/lib/permission-cache';
+
+export { clearPermissionCache } from '@/lib/permission-cache';
 
 export function usePermission(module: string, action: string): boolean {
   const [allowed, setAllowed] = useState(false);
-  const user = getUser();
+  const user = typeof window !== 'undefined' ? getUser() : null;
+  const role = String(user?.role ?? '');
+  const cacheKey = `${role}:${module}:${action}`;
 
-  const check = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
     if (!user) {
       setAllowed(false);
       return;
     }
-    const role = user.role as string;
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       setAllowed(true);
       return;
     }
-    try {
-      const res = await api.post('/permissions/check', { module, action });
-      setAllowed(Boolean(res.data?.allowed));
-    } catch {
-      setAllowed(false);
+    const cache = getPermissionCheckCache();
+    const cached = cache.get(cacheKey);
+    if (cached !== undefined) {
+      setAllowed(cached);
+      return;
     }
-  }, [module, action, user?.role]);
-
-  useEffect(() => {
-    check();
-  }, [check]);
+    (async () => {
+      try {
+        const res = await api.post('/permissions/check', { module, action });
+        const ok = !!res.data?.allowed;
+        cache.set(cacheKey, ok);
+        if (!cancelled) setAllowed(ok);
+      } catch {
+        if (!cancelled) setAllowed(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [module, action, role, cacheKey, user]);
 
   return allowed;
 }

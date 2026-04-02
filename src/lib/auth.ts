@@ -1,4 +1,5 @@
 import api from './api';
+import { clearPermissionCache } from './permission-cache';
 
 export const login = async (email: string, password: string) => {
   const res = await api.post('/auth/login', { email, password });
@@ -8,6 +9,7 @@ export const login = async (email: string, password: string) => {
 };
 
 export const logout = () => {
+  clearPermissionCache();
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.href = '/login';
