@@ -12,6 +12,7 @@ import {
   Hash, CheckCircle, Clock, CreditCard,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePermission } from '@/hooks/usePermission';
 
 const MONTHS = [
   { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -71,6 +72,10 @@ function isCredit(type: string, amount: number): boolean {
 export default function DriverLedgerPage() {
   const qc = useQueryClient();
   const now = new Date();
+  const canViewLedger = usePermission('driver-ledger', 'view');
+  const canCreate = usePermission('driver-ledger', 'create');
+  const canMarkPaid = usePermission('driver-ledger', 'mark-paid');
+  const canDownload = usePermission('driver-ledger', 'download');
 
   const [selectedDriver, setSelectedDriver] = useState('');
   const [filterType, setFilterType] = useState('thisMonth');
@@ -210,12 +215,14 @@ export default function DriverLedgerPage() {
   useEffect(() => { setViewTriggered(false); }, [selectedDriver, filterType, month, year, financialYear, startDate, endDate]);
 
   const handleView = () => {
+    if (!canViewLedger) { toast.error('You do not have permission to view the driver ledger'); return; }
     if (!selectedDriver) { toast.error('Please select a driver'); return; }
     if (filterType === 'custom' && (!startDate || !endDate)) { toast.error('Select start and end dates'); return; }
     setViewTriggered(true);
   };
 
   const downloadPDF = async () => {
+    if (!canDownload) { toast.error('You do not have permission to download ledger PDFs'); return; }
     if (!selectedDriver) { toast.error('Please select a driver'); return; }
     setPdfLoading(true);
     try {
@@ -236,6 +243,7 @@ export default function DriverLedgerPage() {
   };
 
   const quickFilter = (ft: string) => {
+    if (!canViewLedger) { toast.error('You do not have permission to view the driver ledger'); return; }
     setFilterType(ft);
     setTimeout(() => { if (selectedDriver) setViewTriggered(true); }, 0);
   };
@@ -300,12 +308,19 @@ export default function DriverLedgerPage() {
               </div>
             </>
           )}
-          <button onClick={handleView} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#0D2847] h-[38px]">
+          <button
+            onClick={handleView}
+            disabled={!canViewLedger}
+            title={!canViewLedger ? 'No permission to view ledger' : undefined}
+            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#0D2847] h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Search className="w-4 h-4" /> View
           </button>
-          <button onClick={downloadPDF} disabled={!selectedDriver || pdfLoading} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#1A4A7A] disabled:opacity-50 h-[38px]">
-            <Download className="w-4 h-4" /> {pdfLoading ? 'Downloading...' : 'PDF'}
-          </button>
+          {canDownload && (
+            <button onClick={downloadPDF} disabled={!selectedDriver || pdfLoading} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-sm hover:bg-[#1A4A7A] disabled:opacity-50 h-[38px]">
+              <Download className="w-4 h-4" /> {pdfLoading ? 'Downloading...' : 'PDF'}
+            </button>
+          )}
         </div>
         {selectedDriver && (
           <div className="flex flex-wrap gap-1.5">
@@ -379,10 +394,12 @@ export default function DriverLedgerPage() {
                 Ledger — {selectedDriverName}
               </span>
             </div>
-            <button onClick={() => setAddEntryOpen(true)} disabled={!selectedDriver}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-xs hover:bg-[#0D2847] disabled:opacity-50">
-              <Plus className="w-3.5 h-3.5" /> Add Entry
-            </button>
+            {canCreate && (
+              <button onClick={() => setAddEntryOpen(true)} disabled={!selectedDriver}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider text-xs hover:bg-[#0D2847] disabled:opacity-50">
+                <Plus className="w-3.5 h-3.5" /> Add Entry
+              </button>
+            )}
           </div>
 
           {isLoading ? (
@@ -394,7 +411,7 @@ export default function DriverLedgerPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#F4F6F8] border-b border-[#E0E8F0]">
-                    {['Date', 'Description', 'Type', 'Credit (₹)', 'Debit (₹)', 'Status', 'Actions'].map(h => (
+                    {['Date', 'Description', 'Type', 'Credit (₹)', 'Debit (₹)', 'Status', ...(canMarkPaid ? ['Actions'] as const : [])].map(h => (
                       <th key={h} className="text-left px-3 py-2.5 font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#1A4A7A]">{h}</th>
                     ))}
                   </tr>
@@ -430,16 +447,18 @@ export default function DriverLedgerPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5">
-                          {!paid && (
-                            <button
-                              onClick={() => { setMarkPaidEntry(e); setMarkPaidOpen(true); }}
-                              className="px-2 py-1 rounded text-[10px] font-['Barlow_Condensed'] font-semibold uppercase bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20"
-                            >
-                              Mark Paid
-                            </button>
-                          )}
-                        </td>
+                        {canMarkPaid && (
+                          <td className="px-3 py-2.5">
+                            {!paid && (
+                              <button
+                                onClick={() => { setMarkPaidEntry(e); setMarkPaidOpen(true); }}
+                                className="px-2 py-1 rounded text-[10px] font-['Barlow_Condensed'] font-semibold uppercase bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20"
+                              >
+                                Mark Paid
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -449,7 +468,7 @@ export default function DriverLedgerPage() {
                     <td colSpan={3} className="px-3 py-3 font-['Barlow_Condensed'] text-sm font-bold uppercase tracking-wider text-[#0D2847]">Total</td>
                     <td className="px-3 py-3 font-['Oswald'] text-base font-bold text-[#16A34A] text-right tabular-nums">{formatIndianCurrency(summary.totalCredits)}</td>
                     <td className="px-3 py-3 font-['Oswald'] text-base font-bold text-[#DC2626] text-right tabular-nums">{formatIndianCurrency(summary.totalDebits)}</td>
-                    <td colSpan={2} className="px-3 py-3 font-['Oswald'] text-base font-bold text-right tabular-nums">
+                    <td colSpan={canMarkPaid ? 2 : 1} className="px-3 py-3 font-['Oswald'] text-base font-bold text-right tabular-nums">
                       <span className="text-[#7A9AB8] text-xs font-['Barlow_Condensed'] mr-2">NET</span>
                       <span className={net >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{formatIndianCurrency(net)}</span>
                     </td>

@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet
+  BookOpen, Wallet, Settings,
 } from 'lucide-react';
 
 const navGroups = [
@@ -52,8 +52,13 @@ const navGroups = [
       { href: '/shifts', icon: Clock, label: 'Shifts' },
       { href: '/whatsapp', icon: MessageSquare, label: 'WhatsApp' },
     ]
-  }
+  },
 ];
+
+const adminNavGroup = {
+  label: 'ADMIN',
+  items: [{ href: '/admin/permissions', icon: Settings, label: 'Permissions' }],
+};
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith('/clients')) return pathname === '/clients' ? 'Clients' : 'Client';
@@ -77,6 +82,7 @@ function getPageTitle(pathname: string) {
     '/whatsapp': 'WhatsApp',
     '/driver-ledger': 'Driver Ledger',
     '/salary': 'Salary',
+    '/admin/permissions': 'Permissions',
   };
   return map[pathname] || 'Dashboard';
 }
@@ -144,6 +150,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/whatsapp')) { items.push({ label: 'WhatsApp', href: '/whatsapp' }); return items; }
     if (pathname.startsWith('/driver-ledger')) { items.push({ label: 'Driver Ledger', href: '/driver-ledger' }); return items; }
     if (pathname.startsWith('/salary')) { items.push({ label: 'Salary', href: '/salary' }); return items; }
+    if (pathname.startsWith('/admin/permissions')) {
+      items.push({ label: 'Permissions', href: '/admin/permissions' });
+      return items;
+    }
     items.push({ label: pageTitle });
     return items;
   }, [pathname, pageTitle]);
@@ -203,6 +213,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
           ))}
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <div>
+              <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{adminNavGroup.label}</p>
+              <div className="space-y-1">
+                {adminNavGroup.items.map(item => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-['Barlow_Condensed'] uppercase tracking-wider transition-all duration-150 ${
+                        isActive
+                          ? 'bg-[#1565C0]/20 text-white border-l-[3px] border-[#42A5F5] pl-[9px]'
+                          : 'text-[#64B5F6] hover:bg-[#1A4A7A]/30 hover:text-white'
+                      }`}
+                    >
+                      <item.icon size={18} className="text-[#42A5F5] flex-shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-[#1A4A7A]">
