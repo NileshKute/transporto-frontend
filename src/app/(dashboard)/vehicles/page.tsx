@@ -138,6 +138,46 @@ export default function VehiclesPage() {
   const openCreate = () => { setForm({ fuelType: 'DIESEL' }); setEditVehicle(null); setModalOpen(true); };
   const openEdit = (v: any) => { setForm({ ...v }); setEditVehicle(v); setModalOpen(true); };
 
+  const exportVehicles = async () => {
+    try {
+      const res = await api.get('/vehicles?limit=1000');
+      const vehicles = res.data.data || res.data;
+
+      const headers = ['Reg Number', 'Make', 'Model', 'Year', 'Fuel Type', 'Status', 'Current KM', 'PUC Expiry', 'Insurance Expiry', 'Fitness Expiry', 'Permit Expiry'];
+
+      const rows = vehicles.map((v: any) => [
+        v.regNumber || '',
+        v.make || '',
+        v.model || '',
+        v.year || '',
+        v.fuelType || '',
+        v.status || '',
+        v.currentKm || '',
+        v.pucExpiryDate ? new Date(v.pucExpiryDate).toLocaleDateString('en-IN') : '',
+        v.insuranceExpiryDate ? new Date(v.insuranceExpiryDate).toLocaleDateString('en-IN') : '',
+        v.fitnessExpiryDate ? new Date(v.fitnessExpiryDate).toLocaleDateString('en-IN') : '',
+        v.permitExpiryDate ? new Date(v.permitExpiryDate).toLocaleDateString('en-IN') : '',
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Vehicles_Export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -146,7 +186,7 @@ export default function VehiclesPage() {
         <p className="font-['Rajdhani'] text-sm text-[#7A9AB8] mt-0.5">Manage your fleet vehicles</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="border border-[#E0E8F0] text-[#0D2847] hover:bg-[#F4F6F8] font-medium px-4 py-2.5 rounded-lg transition-colors">Export</button>
+          <button type="button" onClick={exportVehicles} className="border border-[#E0E8F0] text-[#0D2847] hover:bg-[#F4F6F8] font-medium px-4 py-2.5 rounded-lg transition-colors">Export</button>
           <button onClick={openCreate} className="flex items-center gap-2 bg-[#1565C0] hover:bg-[#0D2847] text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <Plus className="w-4 h-4" /> Add Vehicle
           </button>
