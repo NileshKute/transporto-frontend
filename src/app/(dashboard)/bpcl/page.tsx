@@ -23,7 +23,20 @@ function defaultDateRange() {
   };
 }
 
-function normalizeTx(row: any) {
+interface TxRow {
+  id: string;
+  date: string;
+  vehicle: string;
+  card: string;
+  product: string;
+  litres: number;
+  rate: number;
+  amount: number;
+  station: string;
+  city: string;
+}
+
+function normalizeTx(row: any): TxRow {
   const d = row.txnDate ?? row.date ?? row.transactionDate ?? row.createdAt;
   return {
     id: String(row.id ?? `${d}-${row.cardNumber}`),
@@ -148,9 +161,9 @@ export default function BpclTransactionsPage() {
       const res = await api.get('/bpcl/transactions', { params: { ...txParams, page: 1, limit: 10000 } });
       const body = res.data?.data ?? res.data;
       const raw = Array.isArray(body) ? body : body?.data ?? body?.items ?? [];
-      const list = raw.map(normalizeTx).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const list = raw.map(normalizeTx).sort((a: TxRow, b: TxRow) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const headers = ['Date', 'Vehicle', 'Card', 'Product', 'Litres', 'Rate', 'Amount', 'Station', 'City'];
-      const csvRows = list.map((t) => [
+      const csvRows = list.map((t: TxRow) => [
         formatBpclDate(t.date),
         t.vehicle,
         t.card,
@@ -162,7 +175,8 @@ export default function BpclTransactionsPage() {
         t.city,
       ]);
       const csvContent = [headers, ...csvRows]
-        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .map((row: (string | number)[]) =>
+          row.map((cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
         .join('\n');
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);

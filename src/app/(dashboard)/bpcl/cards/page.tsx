@@ -44,13 +44,14 @@ function normalizeCard(c: any): CardRow {
 }
 
 function normalizePeriod(p: any): PeriodRow {
+  const hasId = p.id != null && String(p.id).length > 0;
   return {
-    id: String(p.id ?? `new-${Math.random()}`),
+    id: hasId ? String(p.id) : `tmp-${Math.random().toString(36).slice(2)}`,
     tag: (p.tag ?? p.currentTag ?? 'BUSINESS') as TagOpt,
     startDate: p.startDate ? String(p.startDate).slice(0, 10) : '',
     endDate: p.endDate ? String(p.endDate).slice(0, 10) : '',
     notes: String(p.notes ?? ''),
-    isNew: !p.id,
+    isNew: !hasId,
   };
 }
 
@@ -147,7 +148,7 @@ export default function BpclCardsPage() {
     setPeriodRows((rows) => [
       ...rows,
       {
-        id: `new-${Date.now()}`,
+        id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         tag: 'BUSINESS',
         startDate: new Date().toISOString().slice(0, 10),
         endDate: '',
@@ -162,7 +163,7 @@ export default function BpclCardsPage() {
     setPeriodSaving(true);
     try {
       for (const row of periodRows) {
-        if (row.isNew || row.id.startsWith('new-')) {
+        if (row.isNew) {
           await api.post(`/bpcl/cards/${periodModalCard.id}/periods`, {
             tag: row.tag,
             startDate: row.startDate,
@@ -189,7 +190,7 @@ export default function BpclCardsPage() {
   };
 
   const deletePeriod = async (row: PeriodRow) => {
-    if (row.isNew || row.id.startsWith('new-')) {
+    if (row.isNew) {
       setPeriodRows((r) => r.filter((x) => x.id !== row.id));
       return;
     }

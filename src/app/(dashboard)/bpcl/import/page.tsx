@@ -24,11 +24,22 @@ function normalizeImportResult(data: any) {
     duplicatesSkipped: Number(data.duplicatesSkipped ?? data.duplicates_skipped ?? 0),
     newCardsCreated: Number(data.newCardsCreated ?? data.new_cards_created ?? 0),
     newVehiclesCreated: Number(data.newVehiclesCreated ?? data.new_vehicles_created ?? 0),
-    newCards: (data.newCards ?? data.new_cards_detected ?? data.newCardSuggestions ?? []) as NewCardRow[],
+    newCards: (() => {
+      const raw = data.newCards ?? data.new_cards_detected ?? data.newCardSuggestions ?? [];
+      return Array.isArray(raw) ? (raw as NewCardRow[]) : [];
+    })(),
   };
 }
 
-function normalizeHistoryItem(h: any) {
+interface HistoryItem {
+  id: string;
+  createdAt?: string;
+  fileName: string;
+  imported: number;
+  duplicatesSkipped: number;
+}
+
+function normalizeHistoryItem(h: any): HistoryItem {
   return {
     id: String(h.id ?? h.importId ?? Math.random()),
     createdAt: h.createdAt ?? h.created_at ?? h.importedAt,
@@ -59,7 +70,7 @@ export default function BpclImportPage() {
     },
   });
 
-  const history = (historyRaw ?? []).map(normalizeHistoryItem);
+  const history: HistoryItem[] = (historyRaw ?? []).map(normalizeHistoryItem);
 
   const setFileAndUpload = useCallback(async (file: File | null) => {
     if (!file) return;
