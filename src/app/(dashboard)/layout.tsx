@@ -35,7 +35,7 @@ const navGroups = [
   {
     label: 'MONITORING',
     items: [
-      { href: '/maintenance', icon: Wrench, label: 'Maintenance' },
+      { href: '/maintenance', icon: Wrench, label: 'Vehicle Maintenance' },
       { href: '/emergencies', icon: AlertTriangle, label: 'Emergencies' },
       { href: '/insurance', icon: Shield, label: 'Insurance' },
       { href: '/cold-storage', icon: Snowflake, label: 'Cold Storage' },
@@ -66,7 +66,10 @@ const navGroups = [
 
 const adminNavGroup = {
   label: 'ADMIN',
-  items: [{ href: '/admin/permissions', icon: Settings, label: 'Permissions' }],
+  items: [
+    { href: '/admin/permissions', icon: Settings, label: 'Permissions' },
+    { href: '/admin/maintenance-types', icon: Wrench, label: 'Maintenance Types' },
+  ],
 };
 
 function getPageTitle(pathname: string) {
@@ -86,7 +89,8 @@ function getPageTitle(pathname: string) {
     '/bpcl': 'BPCL Transactions',
     '/bpcl/import': 'Import BPCL Data',
     '/bpcl/cards': 'Card Management',
-    '/maintenance': 'Maintenance',
+    '/maintenance': 'Vehicle Maintenance',
+    '/admin/maintenance-types': 'Maintenance Types',
     '/emergencies': 'Emergencies',
     '/insurance': 'Insurance',
     '/cold-storage': 'Cold Storage',
@@ -174,6 +178,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/salary')) { items.push({ label: 'Salary', href: '/salary' }); return items; }
     if (pathname.startsWith('/admin/permissions')) {
       items.push({ label: 'Permissions', href: '/admin/permissions' });
+      return items;
+    }
+    if (pathname.startsWith('/admin/maintenance-types')) {
+      items.push({ label: 'Maintenance Types', href: '/admin/maintenance-types' });
       return items;
     }
     items.push({ label: pageTitle });

@@ -23,6 +23,16 @@ export const formatDate = (date: string | Date | null | undefined): string => {
   return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+/** DD/MM/YYYY for maintenance / service reminders */
+export function formatDateDdMmYyyy(date: string | Date | null | undefined): string {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
 /** Display as 01-Apr-2025 */
 export function formatBpclDate(date: string | Date | null | undefined): string {
   if (!date) return '—';
