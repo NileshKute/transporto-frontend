@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -55,7 +55,7 @@ const inputClass =
 export default function BpclImportPage() {
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [result, setResult] = useState<ReturnType<typeof normalizeImportResult>>(null);
   const [tagDrafts, setTagDrafts] = useState<Record<string, TagOpt>>({});
   const [dragOver, setDragOver] = useState(false);
@@ -72,20 +72,19 @@ export default function BpclImportPage() {
 
   const history: HistoryItem[] = (historyRaw ?? []).map(normalizeHistoryItem);
 
-  const setFileAndUpload = useCallback(async (file: File | null) => {
-    if (!file) return;
+  const handleUpload = async (file: File) => {
     const name = file.name.toLowerCase();
     if (!name.endsWith('.xlsx') && !name.endsWith('.xls') && !name.endsWith('.csv')) {
       toast.error('Please choose an Excel or CSV file');
       return;
     }
     setLoading(true);
-    setError(null);
+    setError('');
     setResult(null);
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await api.post('/bpcl/import', formData);
+      const res = await api.post('/bpcl/import', formData, { timeout: 120000 });
       const norm = normalizeImportResult(res.data);
       setResult(norm);
       const drafts: Record<string, TagOpt> = {};
@@ -96,16 +95,16 @@ export default function BpclImportPage() {
       setTagDrafts(drafts);
       qc.invalidateQueries({ queryKey: ['bpcl-import-history'] });
       toast.success('Import complete');
-    } catch {
-      setError('Import failed');
-      toast.error('Import failed');
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        (typeof err?.response?.data === 'string' ? err.response.data : null);
+      const text = typeof msg === 'string' ? msg : Array.isArray(msg) ? msg.join(', ') : 'Import failed';
+      setError(text);
+      toast.error(text);
     } finally {
       setLoading(false);
     }
-  }, [qc]);
-
-  const handleUpload = async (file: File) => {
-    await setFileAndUpload(file);
   };
 
   const saveBulkTags = async () => {
@@ -181,9 +180,9 @@ export default function BpclImportPage() {
         )}
       </div>
 
-      {error && (
+      {error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Rajdhani']">{error}</div>
-      )}
+      ) : null}
 
       {result && (
         <div className="bg-white border border-[#E0E8F0] rounded-xl shadow-sm p-6 space-y-4">
