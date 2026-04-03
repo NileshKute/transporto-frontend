@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { safe } from '@/lib/utils';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
@@ -103,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  useIdleTimeout(120000);
+  useIdleTimeout(300000);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
@@ -178,6 +179,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     items.push({ label: pageTitle });
     return items;
   }, [pathname, pageTitle]);
+
+  const userDisplayName = useMemo(() => {
+    const n = safe(user?.name);
+    return n === '—' ? 'User' : n;
+  }, [user?.name]);
+
+  const userInitials = useMemo(() => {
+    const n = safe(user?.name);
+    if (!n || n === '—') return 'U';
+    return n.split(/\s+/).filter(Boolean).map((c) => c[0]).join('').slice(0, 2) || 'U';
+  }, [user?.name]);
+
+  const userDisplayRole = useMemo(() => {
+    if (typeof user?.role === 'string') return user.role.replace(/_/g, ' ');
+    const r = safe(user?.role);
+    return r === '—' ? 'Role' : r;
+  }, [user?.role]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F4F6F8]">
@@ -264,11 +282,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 border-t border-[#1A4A7A]">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-[#1565C0] flex items-center justify-center text-sm font-bold font-['Rajdhani']">
-              {user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2) || 'U'}
+              {userInitials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate font-['Rajdhani']">{user?.name || 'User'}</p>
-              <p className="text-[11px] text-[#7A9AB8] font-['Rajdhani']">{user?.role?.replace(/_/g, ' ') || 'Role'}</p>
+              <p className="text-sm font-medium text-white truncate font-['Rajdhani']">{userDisplayName}</p>
+              <p className="text-[11px] text-[#7A9AB8] font-['Rajdhani']">{userDisplayRole}</p>
             </div>
           </div>
           <button
@@ -306,7 +324,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="absolute top-1 right-1 w-2 h-2 bg-[#DC2626] rounded-full" />
               </button>
               <div className="w-9 h-9 rounded-full bg-[#1565C0] flex items-center justify-center text-sm font-bold text-white font-['Rajdhani']">
-                {user?.name?.[0] || 'U'}
+                {userInitials[0] || 'U'}
               </div>
             </div>
           </div>

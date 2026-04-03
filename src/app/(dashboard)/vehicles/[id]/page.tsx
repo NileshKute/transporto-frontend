@@ -6,7 +6,7 @@ import api from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatCurrency, formatDate, formatKm } from '@/lib/utils';
+import { formatCurrency, formatDate, formatKm, safe, safeNumber } from '@/lib/utils';
 import { ArrowLeft, Truck, Shield, FileCheck, Car, Receipt, ScrollText } from 'lucide-react';
 
 const TABS = ['Trips', 'Fuel', 'Maintenance', 'Insurance', 'Doc Status', 'Documents'];
@@ -39,7 +39,7 @@ function DocCard({ title, icon: Icon, fields }: { title: string; icon: any; fiel
         {fields.map(f => (
           <div key={f.label} className="flex justify-between text-xs">
             <span className="text-[#7A9AB8]">{f.label}</span>
-            <span className="text-[#0D2847] font-medium">{f.isExpiry ? formatDate(f.value) : (f.value || '—')}</span>
+            <span className="text-[#0D2847] font-medium">{f.isExpiry ? formatDate(f.value) : safe(f.value)}</span>
           </div>
         ))}
       </div>
@@ -61,12 +61,12 @@ export default function VehicleDetailPage() {
   if (!v) return <EmptyState message="Vehicle not found" />;
 
   const info = [
-    ['Make', v.make || '—'], ['Model', v.model || '—'], ['Year', String(v.year ?? '—')], ['Fuel Type', v.fuelType || '—'],
-    ['Current KM', formatKm(v.currentKm)], ['Load Capacity', v.loadCapacityKg ? `${v.loadCapacityKg} kg` : '—'],
-    ['Tires', String(v.numTires || '—')], ['Tank', v.tankCapacityL ? `${v.tankCapacityL} L` : '—'],
-    ['Chassis', v.chassisNumber || '—'], ['Engine', v.engineNumber || '—'],
-    ['Color', v.color || '—'], ['Purchase Date', formatDate(v.purchaseDate)],
-    ['Owner', v.ownerName || '—'], ['RC Number', v.rcNumber || '—'],
+    ['Make', safe(v.make)], ['Model', safe(v.model)], ['Year', v.year != null && typeof v.year !== 'object' ? String(v.year) : '—'], ['Fuel Type', safe(v.fuelType)],
+    ['Current KM', formatKm(v.currentKm)], ['Load Capacity', Number.isFinite(safeNumber(v.loadCapacityKg, NaN)) ? `${safeNumber(v.loadCapacityKg)} kg` : '—'],
+    ['Tires', v.numTires != null && typeof v.numTires !== 'object' ? String(v.numTires) : '—'], ['Tank', Number.isFinite(safeNumber(v.tankCapacityL, NaN)) ? `${safeNumber(v.tankCapacityL)} L` : '—'],
+    ['Chassis', safe(v.chassisNumber)], ['Engine', safe(v.engineNumber)],
+    ['Color', safe(v.color)], ['Purchase Date', formatDate(v.purchaseDate)],
+    ['Owner', safe(v.ownerName)], ['RC Number', safe(v.rcNumber)],
   ];
 
   return (
@@ -76,8 +76,10 @@ export default function VehicleDetailPage() {
         <div className="flex items-center gap-3 flex-1">
           <div className="p-2 bg-[#42A5F5]/10 rounded-xl"><Truck className="w-5 h-5 text-[#42A5F5]" /></div>
           <div>
-            <h2 className="text-xl font-bold text-[#0D2847] font-mono">{v.regNumber}</h2>
-            <p className="text-sm text-[#7A9AB8]">{v.make} {v.model} • {v.year}</p>
+            <h2 className="text-xl font-bold text-[#0D2847] font-mono">{safe(v.regNumber)}</h2>
+            <p className="text-sm text-[#7A9AB8]">
+              {safe(v.make)} {safe(v.model)} • {v.year != null && typeof v.year !== 'object' ? String(v.year) : '—'}
+            </p>
           </div>
         </div>
         <StatusBadge status={v.status} size="md" />
@@ -110,11 +112,15 @@ export default function VehicleDetailPage() {
               <thead><tr><th>Trip #</th><th>Date</th><th>Route</th><th>Distance</th><th>Status</th></tr></thead>
               <tbody>
                 {v.trips?.map((t: any) => (
-                  <tr key={t.id}>
-                    <td className="font-mono text-xs text-[#42A5F5]">{t.tripNumber}</td>
+                  <tr key={String(t.id ?? '')}>
+                    <td className="font-mono text-xs text-[#42A5F5]">{safe(t.tripNumber)}</td>
                     <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{formatDate(t.date)}</td>
-                    <td className="text-[#1A4A7A] text-xs">{t.startLocation} → {t.endLocation || '...'}</td>
-                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">{t.distanceKm ? `${t.distanceKm} km` : '—'}</td>
+                    <td className="text-[#1A4A7A] text-xs">
+                      {safe(t.startLocation)} → {t.endLocation != null && t.endLocation !== '' ? safe(t.endLocation) : '...'}
+                    </td>
+                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">
+                      {Number.isFinite(safeNumber(t.distanceKm, NaN)) ? `${safeNumber(t.distanceKm)} km` : '—'}
+                    </td>
                     <td><StatusBadge status={t.status} /></td>
                   </tr>
                 ))}
@@ -127,13 +133,13 @@ export default function VehicleDetailPage() {
               <thead><tr><th>Entry #</th><th>Date</th><th>Liters</th><th>Rate/L</th><th>Total</th><th>Station</th></tr></thead>
               <tbody>
                 {v.fuelEntries?.map((f: any) => (
-                  <tr key={f.id}>
-                    <td className="font-mono text-xs text-[#F59E0B]">{f.entryNumber}</td>
+                  <tr key={String(f.id ?? '')}>
+                    <td className="font-mono text-xs text-[#F59E0B]">{safe(f.entryNumber)}</td>
                     <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{formatDate(f.date)}</td>
-                    <td className="text-[#1A4A7A]">{String(f.liters ?? 0)}L</td>
-                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">₹{Number(f.ratePerLiter ?? 0).toFixed(2)}</td>
-                    <td className="text-[#16A34A] font-medium">{formatCurrency(f.totalCost)}</td>
-                    <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{f.fuelStation || '—'}</td>
+                    <td className="text-[#1A4A7A]">{safeNumber(f.liters, 0).toFixed(2)}L</td>
+                    <td className="text-[#1A4A7A] font-['Barlow_Condensed']">₹{safeNumber(f.ratePerLiter, 0).toFixed(2)}</td>
+                    <td className="text-[#16A34A] font-medium">{formatCurrency(safeNumber(f.totalCost, 0))}</td>
+                    <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{typeof f.fuelStation === 'string' ? f.fuelStation : safe(f.fuelStation)}</td>
                   </tr>
                 ))}
                 {!v.fuelEntries?.length && <tr><td colSpan={6}><EmptyState message="No fuel entries" /></td></tr>}
@@ -145,12 +151,12 @@ export default function VehicleDetailPage() {
               <thead><tr><th>Type</th><th>Date</th><th>Cost</th><th>Status</th><th>Garage</th></tr></thead>
               <tbody>
                 {v.maintenance?.map((m: any) => (
-                  <tr key={m.id}>
-                    <td className="text-[#1A4A7A] text-xs">{m.type?.replace(/_/g,' ')}</td>
+                  <tr key={String(m.id ?? '')}>
+                    <td className="text-[#1A4A7A] text-xs">{typeof m.type === 'string' ? m.type.replace(/_/g, ' ') : safe(m.type)}</td>
                     <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{formatDate(m.date)}</td>
-                    <td className="text-[#16A34A]">{formatCurrency(m.cost)}</td>
+                    <td className="text-[#16A34A]">{formatCurrency(safeNumber(m.cost, 0))}</td>
                     <td><StatusBadge status={m.status} /></td>
-                    <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{m.garage || '—'}</td>
+                    <td className="text-[#1A4A7A] font-['Barlow_Condensed'] text-xs">{typeof m.garage === 'string' ? m.garage : safe(m.garage)}</td>
                   </tr>
                 ))}
                 {!v.maintenance?.length && <tr><td colSpan={5}><EmptyState message="No maintenance records" /></td></tr>}
@@ -162,11 +168,11 @@ export default function VehicleDetailPage() {
               <thead><tr><th>Provider</th><th>Policy #</th><th>Type</th><th>Premium</th><th>Expiry</th><th>Status</th></tr></thead>
               <tbody>
                 {v.insurance?.map((i: any) => (
-                  <tr key={i.id}>
-                    <td className="text-[#0D2847] font-medium">{i.provider}</td>
-                    <td className="font-mono text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{i.policyNumber}</td>
-                    <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{i.type}</td>
-                    <td className="text-[#16A34A]">{formatCurrency(i.premium)}</td>
+                  <tr key={String(i.id ?? '')}>
+                    <td className="text-[#0D2847] font-medium">{safe(i.provider)}</td>
+                    <td className="font-mono text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{safe(i.policyNumber)}</td>
+                    <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{safe(i.type)}</td>
+                    <td className="text-[#16A34A]">{formatCurrency(safeNumber(i.premium, 0))}</td>
                     <td className="text-xs text-[#1A4A7A] font-['Barlow_Condensed']">{formatDate(i.endDate)}</td>
                     <td><StatusBadge status={i.status} /></td>
                   </tr>
@@ -214,8 +220,8 @@ export default function VehicleDetailPage() {
               {v.documents?.length ? (
                 <div className="grid grid-cols-2 gap-3">
                   {v.documents.map((d: any) => (
-                    <div key={d.id} className="bg-[#F4F6F8] border border-[#E0E8F0] rounded-xl p-4">
-                      <p className="text-sm font-medium text-[#0D2847]">{d.type.replace(/_/g,' ')}</p>
+                    <div key={String(d.id ?? '')} className="bg-[#F4F6F8] border border-[#E0E8F0] rounded-xl p-4">
+                      <p className="text-sm font-medium text-[#0D2847]">{typeof d.type === 'string' ? d.type.replace(/_/g, ' ') : safe(d.type)}</p>
                       <p className="text-xs text-[#7A9AB8] mt-1">Expires: {formatDate(d.expiryDate)}</p>
                     </div>
                   ))}

@@ -36,19 +36,69 @@ interface TxRow {
   city: string;
 }
 
+function safeStr(v: unknown, fallback = '—'): string {
+  if (v == null) return fallback;
+  const t = typeof v;
+  if (t === 'string' || t === 'number' || t === 'boolean') return String(v);
+  if (t === 'object') {
+    if (Array.isArray(v)) {
+      const parts = v.map((x) => safeStr(x, '')).filter(Boolean);
+      return parts.length ? parts.join(', ') : fallback;
+    }
+    const o = v as Record<string, unknown>;
+    if (o.regNumber != null) return safeStr(o.regNumber, fallback);
+    if (o.reg_number != null) return safeStr(o.reg_number, fallback);
+    return fallback;
+  }
+  return String(v);
+}
+
+function safeNum(v: unknown, fallback = 0): number {
+  if (v == null || v === '') return fallback;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function isoDateFrom(v: unknown): string {
+  if (v == null || v === '') return '';
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : v.toISOString();
+  if (typeof v === 'number' && Number.isFinite(v)) return new Date(v).toISOString();
+  if (typeof v === 'string') return v;
+  return '';
+}
+
+function renderTxnDate(isoOrEmpty: string): string {
+  if (!isoOrEmpty) return '—';
+  const d = new Date(isoOrEmpty);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-IN');
+}
+
+function renderLitres(n: number): string {
+  return Number.isFinite(n) ? Number(n).toFixed(2) : '—';
+}
+
 function normalizeTx(row: any): TxRow {
   const d = row.txnDate ?? row.date ?? row.transactionDate ?? row.createdAt;
+  const veh = row.vehicleReg ?? row.vehicleNumber ?? row.regNumber;
+  const vehicle =
+    veh != null
+      ? safeStr(veh)
+      : row.vehicle && typeof row.vehicle === 'object'
+        ? safeStr((row.vehicle as Record<string, unknown>).regNumber ?? (row.vehicle as Record<string, unknown>).reg_number)
+        : safeStr(row.vehicle);
+  const idRaw = row.id ?? `${isoDateFrom(d)}-${safeStr(row.cardNumber, '')}`;
   return {
-    id: String(row.id ?? `${d}-${row.cardNumber}`),
-    date: d,
-    vehicle: String(row.vehicleReg ?? row.vehicleNumber ?? row.regNumber ?? row.vehicle?.regNumber ?? '—'),
-    card: String(row.cardNumber ?? row.card ?? '—'),
-    product: String(row.product ?? row.fuelType ?? '—'),
-    litres: Number(row.litres ?? row.liters ?? row.quantity ?? 0),
-    rate: Number(row.rate ?? row.ratePerLitre ?? row.ratePerLiter ?? 0),
-    amount: Number(row.amount ?? row.totalAmount ?? 0),
-    station: String(row.station ?? row.stationName ?? row.outlet ?? '—'),
-    city: String(row.city ?? row.stationCity ?? '—'),
+    id: safeStr(idRaw, `txn-${Math.random().toString(36).slice(2)}`),
+    date: isoDateFrom(d),
+    vehicle,
+    card: safeStr(row.cardNumber ?? row.card),
+    product: safeStr(row.product ?? row.fuelType),
+    litres: safeNum(row.litres ?? row.liters ?? row.quantity),
+    rate: safeNum(row.rate ?? row.ratePerLitre ?? row.ratePerLiter),
+    amount: safeNum(row.amount ?? row.totalAmount),
+    station: safeStr(row.station ?? row.stationName ?? row.outlet),
+    city: safeStr(row.city ?? row.stationCity),
   };
 }
 
@@ -64,18 +114,17 @@ function parseBpclTransactionsPayload(resData: any) {
       ? (body as Record<string, unknown>).total
       : undefined;
   const rawTotal = root.total ?? nestedTotal;
-  const totalParsed = Number(rawTotal);
-  const total = Number.isFinite(totalParsed) ? totalParsed : rowsRaw.length;
+  const total = safeNum(rawTotal, rowsRaw.length);
 
   const summaryNested =
     typeof body === 'object' && body && !Array.isArray(body) ? (body as Record<string, unknown>).summary : undefined;
   const summaryRaw = root.summary ?? summaryNested ?? {};
   const s = (summaryRaw && typeof summaryRaw === 'object' ? summaryRaw : {}) as Record<string, unknown>;
 
-  const totalTxns = Number(s.txnCount ?? s.txn_count ?? s.count ?? total);
-  const totalLitres = Number(s.litres ?? s.totalLitres ?? s.total_litres ?? 0);
-  const totalAmount = Number(s.amount ?? s.totalAmount ?? s.total_amount ?? 0);
-  const avgFromSummary = Number(s.avgRate ?? s.avg_rate ?? s.avgRatePerLitre ?? s.avg_rate_per_litre ?? 0);
+  const totalTxns = safeNum(s.txnCount ?? s.txn_count ?? s.count, total);
+  const totalLitres = safeNum(s.litres ?? s.totalLitres ?? s.total_litres, 0);
+  const totalAmount = safeNum(s.amount ?? s.totalAmount ?? s.total_amount, 0);
+  const avgFromSummary = safeNum(s.avgRate ?? s.avg_rate ?? s.avgRatePerLitre ?? s.avg_rate_per_litre, 0);
   const avgRate = totalLitres > 0 ? totalAmount / totalLitres : avgFromSummary;
   return { rowsRaw, total, totalTxns, totalLitres, totalAmount, avgRate };
 }
@@ -197,15 +246,15 @@ export default function BpclTransactionsPage() {
     }
   };
 
-  const total = txRes?.total ?? 0;
-  const totalPages = txRes?.totalPages ?? 1;
-  const totalTxns = txRes?.totalTxns ?? total;
-  const totalLitres = txRes?.totalLitres ?? 0;
-  const totalAmount = txRes?.totalAmount ?? 0;
-  const avgRate = txRes?.avgRate ?? 0;
+  const total = safeNum(txRes?.total, 0);
+  const totalPages = safeNum(txRes?.totalPages, 1);
+  const totalTxns = safeNum(txRes?.totalTxns, total);
+  const totalLitres = safeNum(txRes?.totalLitres, 0);
+  const totalAmount = safeNum(txRes?.totalAmount, 0);
+  const avgRate = safeNum(txRes?.avgRate, 0);
   const litresDisplay =
     totalLitres > 0
-      ? `${Number(totalLitres).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`
+      ? `${safeNum(totalLitres).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`
       : '0.00 L';
 
   return (
@@ -309,19 +358,24 @@ export default function BpclTransactionsPage() {
           </div>
         ) : (
           <>
-            <StatCard icon={ListOrdered} iconColor="blue" title="Total transactions" value={formatNumber(totalTxns)} />
-            <StatCard icon={Fuel} iconColor="cyan" title="Total litres" value={litresDisplay} />
+            <StatCard
+              icon={ListOrdered}
+              iconColor="blue"
+              title="Total transactions"
+              value={String(formatNumber(safeNum(totalTxns)))}
+            />
+            <StatCard icon={Fuel} iconColor="cyan" title="Total litres" value={String(litresDisplay)} />
             <StatCard
               icon={IndianRupee}
               iconColor="amber"
               title="Total amount"
-              value={formatInrTwoDecimals(totalAmount)}
+              value={String(formatInrTwoDecimals(safeNum(totalAmount)))}
             />
             <StatCard
               icon={Gauge}
               iconColor="green"
               title="Avg rate / litre"
-              value={avgRate > 0 ? formatInrTwoDecimals(avgRate) : '—'}
+              value={String(avgRate > 0 ? formatInrTwoDecimals(safeNum(avgRate)) : '—')}
             />
           </>
         )}
@@ -352,20 +406,24 @@ export default function BpclTransactionsPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E0E8F0]">
                   {rows.map((t, idx) => (
-                    <tr key={t.id} className={idx % 2 === 1 ? 'bg-[#F8F9FA]' : ''}>
+                    <tr key={String(t.id)} className={idx % 2 === 1 ? 'bg-[#F8F9FA]' : ''}>
                       <td className="px-4 py-3 text-sm font-['Rajdhani'] text-[#0D2847] whitespace-nowrap">
-                        {formatBpclDate(t.date)}
+                        {renderTxnDate(t.date)}
                       </td>
-                      <td className="px-4 py-3 text-sm font-mono text-[#0D2847]">{t.vehicle}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-[#1A4A7A]">{t.card}</td>
-                      <td className="px-4 py-3 text-sm text-[#0D2847]">{t.product}</td>
-                      <td className="px-4 py-3 text-sm font-mono tabular-nums">{formatNumber(t.litres)}</td>
-                      <td className="px-4 py-3 text-sm font-mono tabular-nums">{formatInrTwoDecimals(t.rate)}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-[#0D2847]">{String(t.vehicle || '—')}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-[#1A4A7A]">{String(t.card || '—')}</td>
+                      <td className="px-4 py-3 text-sm text-[#0D2847]">{String(t.product || '—')}</td>
+                      <td className="px-4 py-3 text-sm font-mono tabular-nums">{renderLitres(safeNum(t.litres))}</td>
+                      <td className="px-4 py-3 text-sm font-mono tabular-nums">
+                        {String(formatInrTwoDecimals(safeNum(t.rate)))}
+                      </td>
                       <td className="px-4 py-3 text-sm font-mono font-semibold text-[#16A34A] tabular-nums">
-                        {formatInrTwoDecimals(t.amount)}
+                        {String(formatInrTwoDecimals(safeNum(t.amount)))}
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#0D2847] max-w-[160px] truncate">{t.station}</td>
-                      <td className="px-4 py-3 text-sm text-[#7A9AB8]">{t.city}</td>
+                      <td className="px-4 py-3 text-sm text-[#0D2847] max-w-[160px] truncate">
+                        {String(t.station || '—')}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#7A9AB8]">{String(t.city || '—')}</td>
                     </tr>
                   ))}
                 </tbody>

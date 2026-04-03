@@ -48,11 +48,6 @@ export const formatDateTime = (date: string | Date | null | undefined): string =
   return new Date(date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-export const formatKm = (km: number | null | undefined): string => {
-  if (km == null) return '—';
-  return km.toLocaleString('en-IN') + ' km';
-};
-
 export const formatTime = (date: string | Date | null | undefined): string => {
   if (!date) return '—';
   return new Date(date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -60,4 +55,35 @@ export const formatTime = (date: string | Date | null | undefined): string => {
 
 export const cn = (...classes: (string | undefined | false | null)[]): string => {
   return classes.filter(Boolean).join(' ');
+};
+
+/** Safe string for React children — avoids rendering Date/object as invalid child (#310). */
+export function safe(val: unknown): string {
+  if (val === null || val === undefined) return '—';
+  if (val instanceof Date) return val.toLocaleDateString('en-IN');
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return '—';
+    }
+  }
+  return String(val);
+}
+
+/** Safe finite number for StatCard / counts (objects → fallback). */
+export function safeNumber(val: unknown, fallback = 0): number {
+  if (val == null || val === '') return fallback;
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  if (typeof val === 'string' && val.trim() !== '') {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  return fallback;
+}
+
+export const formatKm = (km: number | null | undefined | unknown): string => {
+  const n = safeNumber(km, NaN);
+  if (!Number.isFinite(n)) return '—';
+  return n.toLocaleString('en-IN') + ' km';
 };

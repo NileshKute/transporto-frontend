@@ -32,14 +32,25 @@ interface PeriodRow {
 }
 
 function normalizeCard(c: any): CardRow {
+  const rawTag = String(c.currentTag ?? c.current_tag ?? 'BUSINESS').toUpperCase();
+  const currentTag = (['BUSINESS', 'PERSONAL', 'IGNORE'].includes(rawTag) ? rawTag : 'BUSINESS') as TagOpt;
   return {
-    id: String(c.id),
+    id: String(c.id ?? ''),
     cardNumber: String(c.cardNumber ?? c.card_number ?? ''),
     vehicleReg: String(c.vehicleReg ?? c.regNumber ?? c.vehicle_number ?? c.assignedVehicleReg ?? '—'),
-    currentTag: (c.currentTag ?? c.current_tag ?? 'BUSINESS') as TagOpt,
-    txnCount: Number(c.txnCount ?? c.txn_count ?? c.transactionCount ?? 0),
-    totalLitres: Number(c.totalLitres ?? c.total_litres ?? 0),
-    totalAmount: Number(c.totalAmount ?? c.total_amount ?? 0),
+    currentTag,
+    txnCount: (() => {
+      const n = Number(c.txnCount ?? c.txn_count ?? c.transactionCount);
+      return Number.isFinite(n) ? n : 0;
+    })(),
+    totalLitres: (() => {
+      const n = Number(c.totalLitres ?? c.total_litres);
+      return Number.isFinite(n) ? n : 0;
+    })(),
+    totalAmount: (() => {
+      const n = Number(c.totalAmount ?? c.total_amount);
+      return Number.isFinite(n) ? n : 0;
+    })(),
   };
 }
 
@@ -240,17 +251,17 @@ export default function BpclCardsPage() {
         <div className="flex flex-wrap gap-4 text-sm font-['Rajdhani']">
           <span className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span className="text-[#0D2847] font-semibold">{summary.b}</span>
+            <span className="text-[#0D2847] font-semibold">{String(summary.b)}</span>
             <span className="text-[#7A9AB8]">Business</span>
           </span>
           <span className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="text-[#0D2847] font-semibold">{summary.p}</span>
+            <span className="text-[#0D2847] font-semibold">{String(summary.p)}</span>
             <span className="text-[#7A9AB8]">Personal</span>
           </span>
           <span className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            <span className="text-[#0D2847] font-semibold">{summary.i}</span>
+            <span className="text-[#0D2847] font-semibold">{String(summary.i)}</span>
             <span className="text-[#7A9AB8]">Ignore</span>
           </span>
         </div>
@@ -280,16 +291,16 @@ export default function BpclCardsPage() {
                   {isOpen ? <ChevronDown className="w-4 h-4 text-[#7A9AB8]" /> : <ChevronRight className="w-4 h-4 text-[#7A9AB8]" />}
                   <CreditCard className="w-5 h-5 text-[#1565C0] flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono text-sm font-semibold text-[#0D2847]">{card.cardNumber}</span>
+                    <span className="font-mono text-sm font-semibold text-[#0D2847]">{String(card.cardNumber || '—')}</span>
                     <span className="text-[#7A9AB8] mx-2">—</span>
-                    <span className="font-mono text-sm text-[#1A4A7A]">{card.vehicleReg}</span>
+                    <span className="font-mono text-sm text-[#1A4A7A]">{String(card.vehicleReg || '—')}</span>
                     <span className="ml-3 font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#1565C0]">
-                      {card.currentTag}
+                      {String(card.currentTag)}
                     </span>
                   </div>
                   <div className="hidden sm:block text-right text-xs text-[#7A9AB8] font-['Rajdhani']">
-                    {formatNumber(card.txnCount)} txns · {formatNumber(card.totalLitres)} L ·{' '}
-                    {formatInrTwoDecimals(card.totalAmount)}
+                    {String(formatNumber(card.txnCount))} txns · {String(formatNumber(card.totalLitres))} L ·{' '}
+                    {String(formatInrTwoDecimals(card.totalAmount))}
                   </div>
                 </button>
                 {isOpen && (
@@ -314,8 +325,8 @@ export default function BpclCardsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-[#7A9AB8] font-['Rajdhani'] sm:hidden">
-                      {formatNumber(card.txnCount)} txns · {formatNumber(card.totalLitres)} L ·{' '}
-                      {formatInrTwoDecimals(card.totalAmount)}
+                      {String(formatNumber(card.txnCount))} txns · {String(formatNumber(card.totalLitres))} L ·{' '}
+                      {String(formatInrTwoDecimals(card.totalAmount))}
                     </p>
                   </div>
                 )}
@@ -328,7 +339,11 @@ export default function BpclCardsPage() {
       <Modal
         isOpen={!!periodModalCard}
         onClose={closePeriodModal}
-        title={periodModalCard ? `Periods — ${periodModalCard.cardNumber} · ${periodModalCard.vehicleReg}` : 'Periods'}
+        title={
+          periodModalCard
+            ? `Periods — ${String(periodModalCard.cardNumber)} · ${String(periodModalCard.vehicleReg)}`
+            : 'Periods'
+        }
         size="lg"
       >
         {periodLoading ? (
@@ -364,7 +379,9 @@ export default function BpclCardsPage() {
                         setPeriodRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, startDate: e.target.value } : r)))
                       }
                     />
-                    <p className="text-[10px] text-[#7A9AB8] mt-0.5 font-['Rajdhani']">{row.startDate ? formatBpclDate(row.startDate) : ''}</p>
+                    <p className="text-[10px] text-[#7A9AB8] mt-0.5 font-['Rajdhani']">
+                      {row.startDate ? String(formatBpclDate(row.startDate)) : ''}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-[10px] font-['Barlow_Condensed'] uppercase text-[#7A9AB8] mb-1">To</label>
@@ -377,7 +394,7 @@ export default function BpclCardsPage() {
                       }
                     />
                     <p className="text-[10px] text-[#7A9AB8] mt-0.5 font-['Rajdhani']">
-                      {row.endDate ? formatBpclDate(row.endDate) : 'Open-ended'}
+                      {row.endDate ? String(formatBpclDate(row.endDate)) : 'Open-ended'}
                     </p>
                   </div>
                   <div>
@@ -402,7 +419,7 @@ export default function BpclCardsPage() {
                   <input
                     className={inputClass}
                     placeholder="e.g. Company use"
-                    value={row.notes}
+                    value={String(row.notes ?? '')}
                     onChange={(e) =>
                       setPeriodRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, notes: e.target.value } : r)))
                     }

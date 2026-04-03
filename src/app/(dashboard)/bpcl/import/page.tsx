@@ -43,6 +43,14 @@ interface ImportHistoryBatch {
   totalLitres: number;
 }
 
+function historyIso(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? undefined : v.toISOString();
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return new Date(v).toISOString();
+  return undefined;
+}
+
 function parseImportHistoryResponse(resData: unknown): any[] {
   if (Array.isArray(resData)) return resData;
   if (resData && typeof resData === 'object') {
@@ -76,19 +84,25 @@ function normalizeImportHistoryBatch(b: any): ImportHistoryBatch {
     return {
       id,
       importBatchId: importBatchId || id,
-      createdAt: (min.createdAt ?? min.created_at) as string | undefined,
+      createdAt: historyIso(min.createdAt ?? min.created_at),
       count: Number.isFinite(count) ? count : 0,
-      txnMin: (min.txnDate ?? min.txn_date) as string | undefined,
-      txnMax: (max.txnDate ?? max.txn_date) as string | undefined,
-      totalAmount: Number(sum.totalAmount ?? sum.total_amount ?? 0),
-      totalLitres: Number(sum.litres ?? sum.total_litres ?? sum.totalLitres ?? 0),
+      txnMin: historyIso(min.txnDate ?? min.txn_date),
+      txnMax: historyIso(max.txnDate ?? max.txn_date),
+      totalAmount: (() => {
+        const n = Number(sum.totalAmount ?? sum.total_amount ?? 0);
+        return Number.isFinite(n) ? n : 0;
+      })(),
+      totalLitres: (() => {
+        const n = Number(sum.litres ?? sum.total_litres ?? sum.totalLitres ?? 0);
+        return Number.isFinite(n) ? n : 0;
+      })(),
     };
   }
 
   return {
     id: String(b.id ?? b.importBatchId ?? Math.random()),
     importBatchId: String(b.importBatchId ?? b.fileName ?? b.file_name ?? b.id ?? '—'),
-    createdAt: b.createdAt ?? b.created_at ?? b.importedAt,
+    createdAt: historyIso(b.createdAt ?? b.created_at ?? b.importedAt),
     count: Number(b.imported ?? b.recordsImported ?? b._count ?? 0),
     txnMin: undefined,
     txnMax: undefined,
@@ -238,10 +252,10 @@ export default function BpclImportPage() {
             <span className="font-['Oswald'] text-lg font-bold tracking-wide">Import Complete</span>
           </div>
           <ul className="font-['Rajdhani'] text-sm text-[#0D2847] space-y-1.5">
-            <li>Imported: {formatNumber(result.imported)} transactions</li>
-            <li>Duplicates Skipped: {formatNumber(result.duplicatesSkipped)}</li>
-            <li>New Cards Created: {formatNumber(result.newCardsCreated)}</li>
-            <li>New Vehicles Created: {formatNumber(result.newVehiclesCreated)}</li>
+            <li>Imported: {String(formatNumber(result.imported))} transactions</li>
+            <li>Duplicates Skipped: {String(formatNumber(result.duplicatesSkipped))}</li>
+            <li>New Cards Created: {String(formatNumber(result.newCardsCreated))}</li>
+            <li>New Vehicles Created: {String(formatNumber(result.newVehiclesCreated))}</li>
           </ul>
 
           {result.newCards && result.newCards.length > 0 && (
@@ -327,24 +341,26 @@ export default function BpclImportPage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
                     <span className="text-[#7A9AB8] text-xs uppercase font-['Barlow_Condensed'] tracking-wider">Batch</span>
-                    <span className="font-mono text-[#0D2847] font-medium ml-2">{h.importBatchId}</span>
+                    <span className="font-mono text-[#0D2847] font-medium ml-2">{String(h.importBatchId || '—')}</span>
                   </div>
                   <span className="text-[#7A9AB8] text-xs">
-                    {h.createdAt ? formatBpclDate(h.createdAt) : '—'}
+                    {h.createdAt ? String(formatBpclDate(h.createdAt)) : '—'}
                   </span>
                 </div>
                 <div className="text-[#1A4A7A] text-xs flex flex-wrap gap-x-4 gap-y-1">
-                  <span>{formatNumber(h.count)} transactions</span>
+                  <span>{String(formatNumber(Number.isFinite(h.count) ? h.count : 0))} transactions</span>
                   <span>
                     Period:{' '}
                     {h.txnMin || h.txnMax
-                      ? `${h.txnMin ? formatBpclDate(h.txnMin) : '—'} → ${h.txnMax ? formatBpclDate(h.txnMax) : '—'}`
+                      ? `${h.txnMin ? String(formatBpclDate(h.txnMin)) : '—'} → ${h.txnMax ? String(formatBpclDate(h.txnMax)) : '—'}`
                       : '—'}
                   </span>
                 </div>
                 <div className="text-xs text-[#0D2847] flex flex-wrap gap-x-4 gap-y-1">
-                  <span>{formatNumber(h.totalLitres)} L</span>
-                  <span className="font-semibold text-[#16A34A]">{formatInrTwoDecimals(h.totalAmount)}</span>
+                  <span>{String(formatNumber(Number.isFinite(h.totalLitres) ? h.totalLitres : 0))} L</span>
+                  <span className="font-semibold text-[#16A34A]">
+                    {String(formatInrTwoDecimals(Number.isFinite(h.totalAmount) ? h.totalAmount : 0))}
+                  </span>
                 </div>
               </li>
             ))}

@@ -8,7 +8,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { formatKm } from '@/lib/utils';
+import { formatKm, safe } from '@/lib/utils';
 import { Plus, Eye, Pencil, Trash2, Search, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -224,17 +224,27 @@ export default function VehiclesPage() {
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((v: any) => (
-                  <tr key={v.id} className="hover:bg-blue-50/50 transition-colors">
+                  <tr key={String(v.id ?? '')} className="hover:bg-blue-50/50 transition-colors">
                     <td className="px-4 py-3.5 text-sm text-[#0D2847]">
                       <div>
-                        <span className="font-mono font-bold text-[#0D2847]">{v.regNumber}</span>
-                        <p className="text-xs text-[#1A4A7A]">{v.make} {v.model}</p>
+                        <span className="font-mono font-bold text-[#0D2847]">{safe(v.regNumber)}</span>
+                        <p className="text-xs text-[#1A4A7A]">
+                          {safe(v.make)} {safe(v.model)}
+                        </p>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5"><span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">{v.type?.replace(/_/g,' ')}</span></td>
+                    <td className="px-4 py-3.5">
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
+                        {typeof v.type === 'string' ? v.type.replace(/_/g, ' ') : safe(v.type)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3.5"><StatusBadge status={v.status} /></td>
                     <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{formatKm(v.currentKm)}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#1A4A7A]">{v.assignments?.[0]?.driver?.name || 'Unassigned'}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#1A4A7A]">
+                      {typeof v.assignments?.[0]?.driver?.name === 'string' && v.assignments[0].driver.name
+                        ? v.assignments[0].driver.name
+                        : 'Unassigned'}
+                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
                         <Link href={`/vehicles/${v.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></Link>

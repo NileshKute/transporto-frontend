@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { formatIndianCurrency, formatDate } from '@/lib/utils';
+import { formatIndianCurrency, formatDate, safe } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -169,9 +169,13 @@ export default function SalaryPage() {
                   const st = String(r.status ?? 'PENDING');
                   const isPaid = st === 'PAID';
                   return (
-                    <tr key={r.id} className="hover:bg-[#F4F6F8]/50">
-                      <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">{typeof r.driver === 'object' && r.driver ? String(r.driver.name ?? '—') : '—'}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">{typeof r.driver === 'object' && r.driver ? String(r.driver.employeeCode ?? '—') : '—'}</td>
+                    <tr key={String(r.id ?? '')} className="hover:bg-[#F4F6F8]/50">
+                      <td className="px-3 py-2.5 font-['Rajdhani'] text-[#0D2847] font-medium">
+                        {typeof r.driver === 'object' && r.driver != null ? safe((r.driver as Record<string, unknown>).name) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-[#42A5F5]">
+                        {typeof r.driver === 'object' && r.driver != null ? safe((r.driver as Record<string, unknown>).employeeCode) : '—'}
+                      </td>
                       <td className="px-3 py-2.5 font-['Oswald'] text-[#0D2847]">{formatIndianCurrency(Number(r.baseSalary ?? 0))}</td>
                       <td className="px-3 py-2.5 font-['Oswald'] text-[#DC2626]">{formatIndianCurrency(Number(r.totalAdvances ?? 0))}</td>
                       <td className="px-3 py-2.5 font-['Oswald'] text-[#1565C0]">{formatIndianCurrency(Number(r.extraDutyPay ?? 0))}</td>

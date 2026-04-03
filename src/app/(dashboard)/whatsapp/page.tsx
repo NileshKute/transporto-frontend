@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatDateTime, formatTime } from '@/lib/utils';
+import { formatDateTime, formatTime, safe } from '@/lib/utils';
 import { MessageSquare, Fuel, AlertTriangle, MapPin, Route, MessageCircle, Send, User } from 'lucide-react';
 
 // --- Types ---
@@ -311,9 +311,9 @@ export default function WhatsAppPage() {
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-[#0D2847] text-sm">
-                              {msg.driver?.name || 'Unknown Driver'}
+                              {typeof msg.driver?.name === 'string' && msg.driver.name.trim() ? msg.driver.name : 'Unknown Driver'}
                             </span>
-                            <span className="font-mono text-xs text-[#7A9AB8]">{msg.fromPhone}</span>
+                            <span className="font-mono text-xs text-[#7A9AB8]">{safe(msg.fromPhone)}</span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded font-medium border ${badge.className}`}
                             >
@@ -329,7 +329,7 @@ export default function WhatsAppPage() {
                         </div>
 
                         <p className="text-sm text-[#0D2847] bg-[#F4F6F8] border border-[#E0E8F0] rounded-lg p-3 mb-3 font-mono">
-                          &quot;{msg.message}&quot;
+                          &quot;{safe(msg.message ?? msg.body)}&quot;
                         </p>
 
                         {msg.parsedData && Object.keys(msg.parsedData).length > 0 && (
@@ -344,9 +344,7 @@ export default function WhatsAppPage() {
                                   <p className="text-xs text-[#7A9AB8] capitalize">
                                     {k.replace(/([A-Z])/g, ' $1')}
                                   </p>
-                                  <p className="text-sm font-semibold text-[#0D2847]">
-                                    {String(v)}
-                                  </p>
+                                  <p className="text-sm font-semibold text-[#0D2847]">{safe(v)}</p>
                                 </div>
                               ))}
                           </div>
@@ -430,7 +428,7 @@ export default function WhatsAppPage() {
                             : 'bg-white text-[#0D2847] border border-[#E0E8F0]'
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.body}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{safe(msg.message ?? msg.body)}</p>
                         <p className={`text-[10px] mt-1 ${isOut ? 'text-[#7A9AB8]' : 'text-[#7A9AB8]'}`}>
                           {formatTime(msg.receivedAt || msg.sentAt)}
                         </p>

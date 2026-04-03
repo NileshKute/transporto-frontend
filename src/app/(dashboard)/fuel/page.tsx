@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, safe, safeNumber } from '@/lib/utils';
 import { Fuel, Plus, TrendingUp, Droplets, DollarSign, Gauge } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -50,10 +50,15 @@ export default function FuelPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-        <StatCard icon={Fuel} iconColor="amber" title="Total Entries" value={stats?.totalEntries ?? 0} />
-        <StatCard icon={Droplets} iconColor="blue" title="Total Liters" value={`${stats?.totalLiters?.toFixed(0) ?? 0} L`} />
-        <StatCard icon={DollarSign} iconColor="amber" title="Total Cost" value={formatCurrency(stats?.totalCost)} />
-        <StatCard icon={Gauge} iconColor="green" title="Avg Rate (₹/L)" value={stats?.avgRatePerLiter != null ? `₹${stats.avgRatePerLiter.toFixed(2)}` : '—'} />
+        <StatCard icon={Fuel} iconColor="amber" title="Total Entries" value={safeNumber(stats?.totalEntries, 0)} />
+        <StatCard icon={Droplets} iconColor="blue" title="Total Liters" value={`${safeNumber(stats?.totalLiters, 0).toFixed(0)} L`} />
+        <StatCard icon={DollarSign} iconColor="amber" title="Total Cost" value={formatCurrency(safeNumber(stats?.totalCost, 0))} />
+        <StatCard
+          icon={Gauge}
+          iconColor="green"
+          title="Avg Rate (₹/L)"
+          value={Number.isFinite(safeNumber(stats?.avgRatePerLiter, NaN)) ? `₹${safeNumber(stats?.avgRatePerLiter, 0).toFixed(2)}` : '—'}
+        />
       </div>
 
       <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm overflow-hidden">
@@ -71,11 +76,13 @@ export default function FuelPage() {
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((f: any) => (
-                  <tr key={f.id} className="hover:bg-[#F4F6F8] transition-colors">
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono font-semibold">{f.vehicle?.regNumber}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{f.liters} L</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono font-semibold text-[#16A34A]">{formatCurrency(f.totalCost)}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847]">{f.fuelStation || '—'}</td>
+                  <tr key={String(f.id ?? '')} className="hover:bg-[#F4F6F8] transition-colors">
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono font-semibold">{safe(f.vehicle?.regNumber)}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{safeNumber(f.liters, 0).toFixed(2)} L</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono font-semibold text-[#16A34A]">
+                      {formatCurrency(safeNumber(f.totalCost, 0))}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847]">{typeof f.fuelStation === 'string' ? f.fuelStation : safe(f.fuelStation)}</td>
                     <td className="px-4 py-3.5 font-['Rajdhani'] text-sm text-[#7A9AB8]">{formatDate(f.date)}</td>
                   </tr>
                 ))}

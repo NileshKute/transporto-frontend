@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, safe, safeNumber } from '@/lib/utils';
 import { Plus, Search, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -88,15 +88,26 @@ export default function TripsPage() {
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-[#F4F6F8] transition-colors">
-                    <td className="px-4 py-3.5 text-sm font-mono font-bold text-[#1565C0]">{t.tripNumber}</td>
+                  <tr key={String(t.id ?? safe(t.tripNumber))} className="hover:bg-[#F4F6F8] transition-colors">
+                    <td className="px-4 py-3.5 text-sm font-mono font-bold text-[#1565C0]">{safe(t.tripNumber)}</td>
                     <td className="px-4 py-3.5 text-sm text-[#0D2847]">{formatDate(t.date)}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{t.vehicle?.regNumber}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847]">{t.driver?.name}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] max-w-[150px]"><span className="truncate block">{t.startLocation} → {t.endLocation || '...'}</span></td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{t.distanceKm ? `${t.distanceKm} km` : '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{safe(t.vehicle?.regNumber)}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847]">{safe(t.driver?.name)}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] max-w-[150px]">
+                      <span className="truncate block">
+                        {typeof t.startLocation === 'string' ? t.startLocation : safe(t.startLocation)} →{' '}
+                        {typeof t.endLocation === 'string' ? t.endLocation || '...' : safe(t.endLocation)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">
+                      {Number.isFinite(safeNumber(t.distanceKm, NaN)) ? `${safeNumber(t.distanceKm)} km` : '—'}
+                    </td>
                     <td className="px-4 py-3.5"><StatusBadge status={t.status} /></td>
-                    <td className="px-4 py-3.5 font-mono font-semibold text-emerald-600">{t.billAmount ? formatCurrency(t.billAmount) : '—'}</td>
+                    <td className="px-4 py-3.5 font-mono font-semibold text-emerald-600">
+                      {t.billAmount != null && typeof t.billAmount !== 'object' && Number.isFinite(safeNumber(t.billAmount, NaN))
+                        ? formatCurrency(safeNumber(t.billAmount, 0))
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3.5">
                       {t.status === 'IN_PROGRESS' && (
                         <button onClick={() => { setCompleteTrip(t); setCompleteForm({ endKm: t.endKm || '', endLocation: t.endLocation || '' }); }}

@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, safe, safeNumber } from '@/lib/utils';
 import { Plus, Play, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -83,14 +83,24 @@ export default function ShiftsPage() {
               </thead>
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((s: any) => (
-                  <tr key={s.id} className={`hover:bg-[#F4F6F8] transition-colors ${s.overtime > 0 ? 'border-l-4 border-l-[#F59E0B] bg-[#F59E0B]/10' : ''}`}>
-                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{s.driver?.name}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{s.vehicle?.regNumber || '—'}</td>
+                  <tr key={String(s.id ?? '')} className={`hover:bg-[#F4F6F8] transition-colors ${safeNumber(s.overtime, 0) > 0 ? 'border-l-4 border-l-[#F59E0B] bg-[#F59E0B]/10' : ''}`}>
+                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{typeof s.driver?.name === 'string' ? s.driver.name : safe(s.driver)}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{typeof s.vehicle?.regNumber === 'string' ? s.vehicle.regNumber : safe(s.vehicle?.regNumber)}</td>
                     <td className="px-4 py-3.5 text-sm text-[#1A4A7A]">{formatDate(s.date)}</td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{formatDateTime(s.startTime)}</td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{s.endTime ? formatDateTime(s.endTime) : '—'}</td>
-                    <td className="px-4 py-3.5 font-mono font-medium text-[#0D2847]">{s.hoursWorked != null ? `${Math.floor(s.hoursWorked)}h ${Math.round((s.hoursWorked % 1) * 60)}m` : '—'}</td>
-                    <td className="px-4 py-3.5">{s.overtime > 0 ? <span className="text-[#F59E0B] font-bold text-sm">+{s.overtime}h OT</span> : <span className="text-[#1A4A7A]">—</span>}</td>
+                    <td className="px-4 py-3.5 font-mono font-medium text-[#0D2847]">
+                      {Number.isFinite(safeNumber(s.hoursWorked, NaN))
+                        ? `${Math.floor(safeNumber(s.hoursWorked))}h ${Math.round((safeNumber(s.hoursWorked) % 1) * 60)}m`
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {safeNumber(s.overtime, 0) > 0 ? (
+                        <span className="text-[#F59E0B] font-bold text-sm">+{safeNumber(s.overtime)}h OT</span>
+                      ) : (
+                        <span className="text-[#1A4A7A]">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5"><StatusBadge status={s.status} /></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
@@ -122,14 +132,14 @@ export default function ShiftsPage() {
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')}>
                 <option value="">Select Driver</option>
-                {drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {drivers?.map((d: any) => <option key={String(d.id ?? '')} value={d.id}>{typeof d.name === 'string' ? d.name : safe(d.name)}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Vehicle</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')}>
                 <option value="">Select Vehicle</option>
-                {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber}</option>)}
+                {vehicles?.map((v: any) => <option key={String(v.id ?? '')} value={v.id}>{typeof v.regNumber === 'string' ? v.regNumber : safe(v.regNumber)}</option>)}
               </select>
             </div>
             <div>

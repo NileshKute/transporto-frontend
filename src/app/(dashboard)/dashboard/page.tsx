@@ -7,7 +7,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { LoadingSpinner, TableSkeleton } from '@/components/ui/LoadingSpinner';
-import { formatCurrency, formatDate, formatIndianCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate, formatIndianCurrency, safe, safeNumber } from '@/lib/utils';
 import { Truck, Users, Route, Fuel, Wrench, AlertTriangle, Shield, Snowflake, Building2, FileText, FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
@@ -217,10 +217,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-        <StatCard icon={Truck} iconColor="blue" title="Total Vehicles" value={stats?.vehicles?.total ?? vehicles.length} subtitle={`${activeVehiclesCount} active`} />
-        <StatCard icon={Users} iconColor="green" title="Active Drivers" value={stats?.drivers?.total ?? 0} subtitle={`${stats?.drivers?.onTrip ?? 0} on trip`} />
-        <StatCard icon={Route} iconColor="purple" title="Today's Trips" value={stats?.trips?.today ?? 0} subtitle="Active today" />
-        <StatCard icon={Fuel} iconColor="amber" title="Fuel Spend" value={formatCurrency(stats?.fuel?.totalCost)} subtitle="All time" />
+        <StatCard icon={Truck} iconColor="blue" title="Total Vehicles" value={safeNumber(stats?.vehicles?.total, vehicles.length)} subtitle={`${safeNumber(activeVehiclesCount)} active`} />
+        <StatCard icon={Users} iconColor="green" title="Active Drivers" value={safeNumber(stats?.drivers?.total, 0)} subtitle={`${safeNumber(stats?.drivers?.onTrip, 0)} on trip`} />
+        <StatCard icon={Route} iconColor="purple" title="Today's Trips" value={safeNumber(stats?.trips?.today, 0)} subtitle="Active today" />
+        <StatCard icon={Fuel} iconColor="amber" title="Fuel Spend" value={formatCurrency(safeNumber(stats?.fuel?.totalCost, 0))} subtitle="All time" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -241,7 +241,7 @@ export default function DashboardPage() {
               <Truck className="w-6 h-6 text-[#1565C0]" />
             </div>
             <div>
-              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{activeVehiclesCount}</p>
+              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{safeNumber(activeVehiclesCount)}</p>
               <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">Active Vehicles</p>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
               <Route className="w-6 h-6 text-[#42A5F5]" />
             </div>
             <div>
-              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{tripsThisMonth}</p>
+              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{safeNumber(tripsThisMonth)}</p>
               <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">Trips This Month</p>
             </div>
           </div>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
               <AlertTriangle className="w-6 h-6 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{pendingInvoicesCount}</p>
+              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{safeNumber(pendingInvoicesCount)}</p>
               <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">Pending Invoices</p>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function DashboardPage() {
               <AlertTriangle className="w-6 h-6 text-[#DC2626]" />
             </div>
             <div>
-              <p className={`font-['Oswald'] text-2xl font-bold ${overdueCount > 0 ? 'text-[#DC2626]' : 'text-[#7A9AB8]'}`}>{overdueCount}</p>
+              <p className={`font-['Oswald'] text-2xl font-bold ${overdueCount > 0 ? 'text-[#DC2626]' : 'text-[#7A9AB8]'}`}>{safeNumber(overdueCount)}</p>
               <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">Overdue Payments</p>
             </div>
           </div>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
               <Building2 className="w-6 h-6 text-[#16A34A]" />
             </div>
             <div>
-              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{activeClientsCount}</p>
+              <p className="font-['Oswald'] text-2xl font-bold text-[#0D2847]">{safeNumber(activeClientsCount)}</p>
               <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">Active Clients</p>
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
             <div className={`bg-white rounded-xl border border-[#E0E8F0] border-l-4 ${border} p-4 shadow-sm flex items-center gap-4 hover:shadow-md transition-all cursor-pointer`}>
               <div className={`p-2.5 rounded-xl ${iconClass} bg-current/10`}><Icon className="w-5 h-5" /></div>
               <div>
-                <p className={`font-['Oswald'] text-2xl font-bold ${value > 0 ? iconClass : 'text-[#7A9AB8]'}`}>{value}</p>
+                <p className={`font-['Oswald'] text-2xl font-bold ${safeNumber(value) > 0 ? iconClass : 'text-[#7A9AB8]'}`}>{safeNumber(value)}</p>
                 <p className="font-['Barlow_Condensed'] text-xs text-[#7A9AB8] uppercase tracking-wider mt-0.5">{label}</p>
               </div>
             </div>
@@ -414,10 +414,13 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E0E8F0]">
                   {recent?.trips?.slice(0, 5).map((t: any) => (
-                    <tr key={t.id} className="hover:bg-[#F4F6F8] transition-colors">
-                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani']"><span className="font-mono font-bold text-[#1565C0]">{t.tripNumber}</span></td>
-                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani']"><span className="font-mono">{t.vehicle?.regNumber}</span></td>
-                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] truncate max-w-[160px]">{t.startLocation?.split('(')[0].trim()} → {t.endLocation?.split('(')[0].trim() || '...'}</td>
+                    <tr key={String(t.id ?? safe(t.tripNumber))} className="hover:bg-[#F4F6F8] transition-colors">
+                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani']"><span className="font-mono font-bold text-[#1565C0]">{safe(t.tripNumber)}</span></td>
+                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani']"><span className="font-mono">{safe(t.vehicle?.regNumber)}</span></td>
+                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] truncate max-w-[160px]">
+                        {typeof t.startLocation === 'string' ? t.startLocation.split('(')[0].trim() : safe(t.startLocation)} →{' '}
+                        {typeof t.endLocation === 'string' ? (t.endLocation.split('(')[0].trim() || '...') : safe(t.endLocation)}
+                      </td>
                       <td className="px-4 py-3.5"><StatusBadge status={t.status} /></td>
                     </tr>
                   ))}
@@ -444,9 +447,9 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E0E8F0]">
                   {recent?.fuelEntries?.slice(0, 5).map((f: any) => (
-                    <tr key={f.id} className="hover:bg-[#F4F6F8] transition-colors">
-                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] font-mono font-semibold">{f.vehicle?.regNumber}</td>
-                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] font-mono">{f.liters} L</td>
+                    <tr key={String(f.id ?? '')} className="hover:bg-[#F4F6F8] transition-colors">
+                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] font-mono font-semibold">{safe(f.vehicle?.regNumber)}</td>
+                      <td className="px-4 py-3.5 text-sm text-[#0D2847] font-['Rajdhani'] font-mono">{safeNumber(f.liters, 0).toFixed(2)} L</td>
                       <td className="px-4 py-3.5 text-sm text-[#16A34A] font-['Rajdhani'] font-mono font-semibold">{formatCurrency(f.totalCost)}</td>
                       <td className="px-4 py-3.5 text-sm text-[#7A9AB8] font-['Rajdhani']">{formatDate(f.fuelDate)}</td>
                     </tr>
