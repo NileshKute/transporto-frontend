@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { formatIndianCurrency, formatDate } from '@/lib/utils';
+import { formatIndianCurrency, formatDate, cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -519,17 +519,34 @@ export default function DriverLedgerPage() {
 function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
   isOpen: boolean; onClose: () => void; driverId: string; onSave: (p: any) => void; isPending: boolean;
 }) {
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY' as string,
     description: '', amount: '', isPaid: false, paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute',
   });
-  const reset = () => setForm({
-    date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY',
-    description: '', amount: '', isPaid: false, paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute',
-  });
+  const reset = () => {
+    setForm({
+      date: new Date().toISOString().slice(0, 10), type: 'EXTRA_DUTY',
+      description: '', amount: '', isPaid: false, paidMode: 'CASH', paidRef: '', paidBy: 'Ganesh Kute',
+    });
+    setValidationErrors({});
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!driverId?.trim()) errors.driverId = 'Driver is required';
+    if (!form.type?.trim()) errors.type = 'Type is required';
+    if (!form.date?.trim()) errors.date = 'Date is required';
+    const amt = Number(form.amount);
+    if (form.amount === '' || !Number.isFinite(amt) || amt === 0) {
+      errors.amount = 'Enter a valid non-zero amount';
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
     const type = form.type;
     const isCr = CREDIT_TYPES.includes(type) || (type === 'OTHER' && Number(form.amount) >= 0);
     const d = new Date(form.date);
@@ -545,25 +562,68 @@ function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
   return (
     <Modal isOpen={isOpen} onClose={() => { reset(); onClose(); }} title="Add Ledger Entry">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {validationErrors.driverId && (
+          <p className="text-red-600 text-xs font-['Rajdhani']">{validationErrors.driverId}</p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Date *</label>
-            <input type="date" className={inputClass} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
+            <input
+              type="date"
+              className={cn(inputClass, validationErrors.date && 'border-red-500 ring-1 ring-red-500/25')}
+              value={form.date}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, date: e.target.value }));
+                setValidationErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.date;
+                  return next;
+                });
+              }}
+            />
+            {validationErrors.date && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.date}</p>}
           </div>
           <div>
             <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Type *</label>
-            <select className={inputClass} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            <select
+              className={cn(inputClass, validationErrors.type && 'border-red-500 ring-1 ring-red-500/25')}
+              value={form.type}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, type: e.target.value }));
+                setValidationErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.type;
+                  return next;
+                });
+              }}
+            >
               {ENTRY_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
             </select>
+            {validationErrors.type && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.type}</p>}
           </div>
         </div>
         <div>
           <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Description *</label>
-          <input className={inputClass} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Zepto Blinkit Extra Duty" required />
+          <input className={inputClass} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Zepto Blinkit Extra Duty" />
         </div>
         <div>
           <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Amount (₹) *</label>
-          <input type="number" className={inputClass} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} min={1} step="0.01" required />
+          <input
+            type="number"
+            className={cn(inputClass, validationErrors.amount && 'border-red-500 ring-1 ring-red-500/25')}
+            value={form.amount}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, amount: e.target.value }));
+              setValidationErrors((prev) => {
+                const next = { ...prev };
+                delete next.amount;
+                return next;
+              });
+            }}
+            min={0}
+            step="0.01"
+          />
+          {validationErrors.amount && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.amount}</p>}
         </div>
 
         {/* Already Paid Toggle */}

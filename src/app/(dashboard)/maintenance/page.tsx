@@ -15,6 +15,7 @@ import {
   formatDateDdMmYyyy,
   safe,
   safeNumber,
+  cn,
 } from '@/lib/utils';
 import { Plus, Search, Trash2, ClipboardList, IndianRupee, Wrench, Package, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -139,6 +140,7 @@ function MaintenancePageInner() {
   const [viewRecord, setViewRecord] = useState<MaintRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [totalManual, setTotalManual] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     vehicleId: '',
@@ -265,11 +267,13 @@ function MaintenancePageInner() {
       }));
       setViewRecord(null);
       setTotalManual(false);
+      setValidationErrors({});
       setModalOpen(true);
     }
   }, [searchParams]);
 
   const openAdd = () => {
+    setValidationErrors({});
     setViewRecord(null);
     setTotalManual(false);
     setForm({
@@ -295,6 +299,7 @@ function MaintenancePageInner() {
   };
 
   const openEdit = (r: MaintRecord) => {
+    setValidationErrors({});
     setViewRecord(r);
     setTotalManual(true);
     const cat = (String(r.category ?? 'TRUCK').toUpperCase() === 'REEFER' ? 'REEFER' : 'TRUCK') as Category;
@@ -331,6 +336,11 @@ function MaintenancePageInner() {
   );
 
   const setLaborParts = (field: 'laborCost' | 'partsCost', value: string) => {
+    setValidationErrors((prev) => {
+      const next = { ...prev };
+      delete next.cost;
+      return next;
+    });
     setForm((f) => {
       const next = { ...f, [field]: value };
       if (!totalManual) {
@@ -357,6 +367,7 @@ function MaintenancePageInner() {
       toast.success(viewRecord ? 'Record updated' : 'Record saved');
       setModalOpen(false);
       setViewRecord(null);
+      setValidationErrors({});
     },
     onError: (e: unknown) => {
       const msg =
@@ -380,9 +391,25 @@ function MaintenancePageInner() {
   });
 
   const submitRecord = () => {
-    const labor = safeNumber(form.laborCost, 0);
-    const parts = safeNumber(form.partsCost, 0);
-    const total = form.totalCost !== '' ? safeNumber(form.totalCost, labor + parts) : labor + parts;
+    const errors: Record<string, string> = {};
+    if (!form.vehicleId) errors.vehicleId = 'Vehicle is required';
+    if (!form.maintenanceTypeId) errors.typeId = 'Maintenance type is required';
+    if (!form.date) errors.date = 'Date is required';
+    const laborN = safeNumber(form.laborCost, 0);
+    const partsN = safeNumber(form.partsCost, 0);
+    const totalN = form.totalCost !== '' ? safeNumber(form.totalCost, laborN + partsN) : laborN + partsN;
+    if (laborN <= 0 && partsN <= 0 && totalN <= 0) {
+      errors.cost = 'Enter at least one cost (labor, parts, or total)';
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+
+    const labor = laborN;
+    const parts = partsN;
+    const total = totalN;
     const payload: Record<string, unknown> = {
       vehicleId: form.vehicleId,
       category: form.category,
@@ -626,6 +653,7 @@ function MaintenancePageInner() {
         onClose={() => {
           setModalOpen(false);
           setViewRecord(null);
+          setValidationErrors({});
         }}
         title={viewRecord ? 'View / edit record' : 'Add maintenance record'}
         size="xl"
@@ -635,26 +663,42 @@ function MaintenancePageInner() {
             <div>
               <label className="block text-[10px] font-['Barlow_Condensed'] font-semibold uppercase text-[#1A4A7A] mb-1">Vehicle *</label>
               <select
-                className={inputClass}
+                className={cn(inputClass, validationErrors.vehicleId && 'border-red-500 ring-1 ring-red-500/25')}
                 value={form.vehicleId}
-                onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, vehicleId: e.target.value }));
+                  setValidationErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.vehicleId;
+                    return next;
+                  });
+                }}
               >
-                <option value="">Select vehicle</option>
+                <option value="">Select vehicle *</option>
                 {vehicles.map((v: { id?: string; regNumber?: string }) => (
                   <option key={String(v.id)} value={String(v.id)}>
                     {safe(v.regNumber)}
                   </option>
                 ))}
               </select>
+              {validationErrors.vehicleId && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.vehicleId}</p>}
             </div>
             <div>
               <label className="block text-[10px] font-['Barlow_Condensed'] font-semibold uppercase text-[#1A4A7A] mb-1">Date *</label>
               <input
                 type="date"
-                className={inputClass}
+                className={cn(inputClass, validationErrors.date && 'border-red-500 ring-1 ring-red-500/25')}
                 value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, date: e.target.value }));
+                  setValidationErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.date;
+                    return next;
+                  });
+                }}
               />
+              {validationErrors.date && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.date}</p>}
             </div>
           </div>
 
@@ -666,15 +710,20 @@ function MaintenancePageInner() {
                   type="radio"
                   name="vm-cat"
                   checked={form.category === 'TRUCK'}
-                  onChange={() =>
+                  onChange={() => {
+                    setValidationErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.typeId;
+                      return next;
+                    });
                     setForm((f) => ({
                       ...f,
                       category: 'TRUCK',
                       maintenanceTypeId: '',
                       runningHours: '',
                       nextServiceHours: '',
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <span>🚛 Truck</span>
               </label>
@@ -683,15 +732,20 @@ function MaintenancePageInner() {
                   type="radio"
                   name="vm-cat"
                   checked={form.category === 'REEFER'}
-                  onChange={() =>
+                  onChange={() => {
+                    setValidationErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.typeId;
+                      return next;
+                    });
                     setForm((f) => ({
                       ...f,
                       category: 'REEFER',
                       maintenanceTypeId: '',
                       odometerKm: '',
                       nextServiceKm: '',
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <span>❄️ Reefer</span>
               </label>
@@ -699,19 +753,27 @@ function MaintenancePageInner() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-['Barlow_Condensed'] font-semibold uppercase text-[#1A4A7A] mb-1">Type</label>
+            <label className="block text-[10px] font-['Barlow_Condensed'] font-semibold uppercase text-[#1A4A7A] mb-1">Type *</label>
             <select
-              className={inputClass}
+              className={cn(inputClass, validationErrors.typeId && 'border-red-500 ring-1 ring-red-500/25')}
               value={form.maintenanceTypeId}
-              onChange={(e) => setForm((f) => ({ ...f, maintenanceTypeId: e.target.value }))}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, maintenanceTypeId: e.target.value }));
+                setValidationErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.typeId;
+                  return next;
+                });
+              }}
             >
-              <option value="">Select type</option>
+              <option value="">Select type *</option>
               {filteredTypesForForm.map((t) => (
                 <option key={t.id} value={t.id}>
                   {(t.icon ? `${t.icon} ` : '') + t.name}
                 </option>
               ))}
             </select>
+            {validationErrors.typeId && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{validationErrors.typeId}</p>}
           </div>
 
           <div>
@@ -730,7 +792,7 @@ function MaintenancePageInner() {
                 type="number"
                 min={0}
                 step="0.01"
-                className={inputClass}
+                className={cn(inputClass, validationErrors.cost && 'border-red-500 ring-1 ring-red-500/25')}
                 value={form.laborCost}
                 onChange={(e) => setLaborParts('laborCost', e.target.value)}
               />
@@ -741,7 +803,7 @@ function MaintenancePageInner() {
                 type="number"
                 min={0}
                 step="0.01"
-                className={inputClass}
+                className={cn(inputClass, validationErrors.cost && 'border-red-500 ring-1 ring-red-500/25')}
                 value={form.partsCost}
                 onChange={(e) => setLaborParts('partsCost', e.target.value)}
               />
@@ -752,16 +814,22 @@ function MaintenancePageInner() {
                 type="number"
                 min={0}
                 step="0.01"
-                className={inputClass}
+                className={cn(inputClass, validationErrors.cost && 'border-red-500 ring-1 ring-red-500/25')}
                 value={form.totalCost}
                 onChange={(e) => {
                   setTotalManual(true);
+                  setValidationErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.cost;
+                    return next;
+                  });
                   setForm((f) => ({ ...f, totalCost: e.target.value }));
                 }}
               />
               <p className="text-[10px] text-[#7A9AB8] mt-1">Auto = labor + parts; edit to override</p>
             </div>
           </div>
+          {validationErrors.cost && <p className="text-red-600 text-xs font-['Rajdhani']">{validationErrors.cost}</p>}
 
           {form.category === 'TRUCK' ? (
             <div>
@@ -845,6 +913,7 @@ function MaintenancePageInner() {
               onClick={() => {
                 setModalOpen(false);
                 setViewRecord(null);
+                setValidationErrors({});
               }}
               className="flex-1 py-2.5 text-sm font-medium text-[#1A4A7A] border border-[#E0E8F0] rounded-lg hover:bg-[#F4F6F8]"
             >
@@ -852,7 +921,7 @@ function MaintenancePageInner() {
             </button>
             <button
               type="button"
-              disabled={saveMutation.isPending || !form.vehicleId || !form.date}
+              disabled={saveMutation.isPending}
               onClick={submitRecord}
               className="flex-1 py-2.5 text-sm font-semibold text-white bg-[#1565C0] hover:bg-[#0D2847] disabled:opacity-50 rounded-lg font-['Barlow_Condensed'] uppercase tracking-wider"
             >

@@ -6,7 +6,7 @@ import api from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatBpclDate, formatInrTwoDecimals, formatNumber } from '@/lib/utils';
+import { formatBpclDate, formatInrTwoDecimals, formatNumber, cn } from '@/lib/utils';
 import { CreditCard, ChevronDown, ChevronRight, Trash2, CalendarRange } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -88,6 +88,7 @@ export default function BpclCardsPage() {
   const [periodRows, setPeriodRows] = useState<PeriodRow[]>([]);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodSaving, setPeriodSaving] = useState(false);
+  const [periodFieldErrors, setPeriodFieldErrors] = useState<Record<string, { startDate?: string; tag?: string }>>({});
 
   const { data: cardsRaw, isLoading } = useQuery({
     queryKey: ['bpcl-cards'],
@@ -142,6 +143,7 @@ export default function BpclCardsPage() {
 
   const openPeriodModal = async (card: CardRow) => {
     setPeriodModalCard(card);
+    setPeriodFieldErrors({});
     setPeriodLoading(true);
     setPeriodRows([]);
     try {
@@ -157,6 +159,7 @@ export default function BpclCardsPage() {
   const closePeriodModal = () => {
     setPeriodModalCard(null);
     setPeriodRows([]);
+    setPeriodFieldErrors({});
   };
 
   const addPeriodRow = () => {
@@ -175,6 +178,19 @@ export default function BpclCardsPage() {
 
   const savePeriods = async () => {
     if (!periodModalCard) return;
+    const errs: Record<string, { startDate?: string; tag?: string }> = {};
+    for (const row of periodRows) {
+      const rowErr: { startDate?: string; tag?: string } = {};
+      if (!String(row.startDate ?? '').trim()) rowErr.startDate = 'Start date is required';
+      const tagOk = row.tag === 'BUSINESS' || row.tag === 'PERSONAL' || row.tag === 'IGNORE';
+      if (!tagOk) rowErr.tag = 'Tag is required';
+      if (Object.keys(rowErr).length > 0) errs[row.id] = rowErr;
+    }
+    if (Object.keys(errs).length > 0) {
+      setPeriodFieldErrors(errs);
+      return;
+    }
+    setPeriodFieldErrors({});
     setPeriodSaving(true);
     try {
       for (const row of periodRows) {
@@ -353,7 +369,9 @@ export default function BpclCardsPage() {
             {periodRows.length === 0 && (
               <p className="text-sm text-[#7A9AB8] font-['Rajdhani']">No periods yet. Add one to split Business / Personal by date range.</p>
             )}
-            {periodRows.map((row, idx) => (
+            {periodRows.map((row, idx) => {
+              const fe = periodFieldErrors[row.id];
+              return (
               <div key={row.id} className="border border-[#E0E8F0] rounded-lg p-4 space-y-3 bg-[#F8F9FA]">
                 <div className="flex items-center justify-between">
                   <span className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">
@@ -370,15 +388,24 @@ export default function BpclCardsPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-['Barlow_Condensed'] uppercase text-[#7A9AB8] mb-1">From</label>
+                    <label className="block text-[10px] font-['Barlow_Condensed'] uppercase text-[#7A9AB8] mb-1">From *</label>
                     <input
                       type="date"
-                      className={inputClass}
+                      className={cn(inputClass, fe?.startDate && 'border-red-500 ring-1 ring-red-500/25')}
                       value={row.startDate}
-                      onChange={(e) =>
-                        setPeriodRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, startDate: e.target.value } : r)))
-                      }
+                      onChange={(e) => {
+                        setPeriodRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, startDate: e.target.value } : r)));
+                        setPeriodFieldErrors((prev) => {
+                          const copy = { ...prev };
+                          const sub = copy[row.id] ? { ...copy[row.id] } : {};
+                          delete sub.startDate;
+                          if (Object.keys(sub).length === 0) delete copy[row.id];
+                          else copy[row.id] = sub;
+                          return copy;
+                        });
+                      }}
                     />
+                    {fe?.startDate && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{fe.startDate}</p>}
                     <p className="text-[10px] text-[#7A9AB8] mt-0.5 font-['Rajdhani']">
                       {row.startDate ? String(formatBpclDate(row.startDate)) : ''}
                     </p>
@@ -398,20 +425,29 @@ export default function BpclCardsPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-['Barlow_Condensed'] uppercase text-[#7A9AB8] mb-1">Tag</label>
+                    <label className="block text-[10px] font-['Barlow_Condensed'] uppercase text-[#7A9AB8] mb-1">Tag *</label>
                     <select
-                      className={inputClass}
+                      className={cn(inputClass, fe?.tag && 'border-red-500 ring-1 ring-red-500/25')}
                       value={row.tag}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setPeriodRows((rs) =>
                           rs.map((r) => (r.id === row.id ? { ...r, tag: e.target.value as TagOpt } : r))
-                        )
-                      }
+                        );
+                        setPeriodFieldErrors((prev) => {
+                          const copy = { ...prev };
+                          const sub = copy[row.id] ? { ...copy[row.id] } : {};
+                          delete sub.tag;
+                          if (Object.keys(sub).length === 0) delete copy[row.id];
+                          else copy[row.id] = sub;
+                          return copy;
+                        });
+                      }}
                     >
                       <option value="BUSINESS">BUSINESS</option>
                       <option value="PERSONAL">PERSONAL</option>
                       <option value="IGNORE">IGNORE</option>
                     </select>
+                    {fe?.tag && <p className="text-red-600 text-xs mt-1 font-['Rajdhani']">{fe.tag}</p>}
                   </div>
                 </div>
                 <div>
@@ -426,7 +462,8 @@ export default function BpclCardsPage() {
                   />
                 </div>
               </div>
-            ))}
+            );
+            })}
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 type="button"
