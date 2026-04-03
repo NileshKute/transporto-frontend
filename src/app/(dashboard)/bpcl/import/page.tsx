@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatBpclDate, formatNumber } from '@/lib/utils';
+import { formatBpclDate, formatInrTwoDecimals, formatNumber } from '@/lib/utils';
 import { Upload, FileSpreadsheet, CheckCircle2, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,21 +31,69 @@ function normalizeImportResult(data: any) {
   };
 }
 
-interface HistoryItem {
+/** Prisma groupBy batch or legacy flat row */
+interface ImportHistoryBatch {
   id: string;
+  importBatchId: string;
   createdAt?: string;
-  fileName: string;
-  imported: number;
-  duplicatesSkipped: number;
+  count: number;
+  txnMin?: string;
+  txnMax?: string;
+  totalAmount: number;
+  totalLitres: number;
 }
 
-function normalizeHistoryItem(h: any): HistoryItem {
+function parseImportHistoryResponse(resData: unknown): any[] {
+  if (Array.isArray(resData)) return resData;
+  if (resData && typeof resData === 'object') {
+    const o = resData as Record<string, unknown>;
+    if (Array.isArray(o.data)) return o.data;
+    if (Array.isArray(o.items)) return o.items;
+  }
+  return [];
+}
+
+function normalizeImportHistoryBatch(b: any): ImportHistoryBatch {
+  const sum = b._sum ?? {};
+  const min = b._min ?? {};
+  const max = b._max ?? {};
+  const isGroupBy =
+    b.importBatchId != null ||
+    b._count != null ||
+    b._sum != null ||
+    b._min != null ||
+    b._max != null;
+
+  if (isGroupBy) {
+    const importBatchId = String(b.importBatchId ?? b.import_batch_id ?? '');
+    const id = importBatchId || String(b.id ?? Math.random());
+    let count = 0;
+    if (typeof b._count === 'number') count = b._count;
+    else if (b._count && typeof b._count === 'object') {
+      const c = b._count as Record<string, unknown>;
+      count = Number(c._all ?? c.id ?? Object.values(c)[0] ?? 0);
+    }
+    return {
+      id,
+      importBatchId: importBatchId || id,
+      createdAt: (min.createdAt ?? min.created_at) as string | undefined,
+      count: Number.isFinite(count) ? count : 0,
+      txnMin: (min.txnDate ?? min.txn_date) as string | undefined,
+      txnMax: (max.txnDate ?? max.txn_date) as string | undefined,
+      totalAmount: Number(sum.totalAmount ?? sum.total_amount ?? 0),
+      totalLitres: Number(sum.litres ?? sum.total_litres ?? sum.totalLitres ?? 0),
+    };
+  }
+
   return {
-    id: String(h.id ?? h.importId ?? Math.random()),
-    createdAt: h.createdAt ?? h.created_at ?? h.importedAt,
-    fileName: h.fileName ?? h.file_name ?? h.filename ?? '—',
-    imported: Number(h.imported ?? h.recordsImported ?? 0),
-    duplicatesSkipped: Number(h.duplicatesSkipped ?? h.duplicates_skipped ?? 0),
+    id: String(b.id ?? b.importBatchId ?? Math.random()),
+    importBatchId: String(b.importBatchId ?? b.fileName ?? b.file_name ?? b.id ?? '—'),
+    createdAt: b.createdAt ?? b.created_at ?? b.importedAt,
+    count: Number(b.imported ?? b.recordsImported ?? b._count ?? 0),
+    txnMin: undefined,
+    txnMax: undefined,
+    totalAmount: 0,
+    totalLitres: 0,
   };
 }
 
@@ -65,12 +113,11 @@ export default function BpclImportPage() {
     queryKey: ['bpcl-import-history'],
     queryFn: async () => {
       const res = await api.get('/bpcl/import-history');
-      const raw = res.data?.data ?? res.data;
-      return Array.isArray(raw) ? raw : raw?.items ?? [];
+      return parseImportHistoryResponse(res.data);
     },
   });
 
-  const history: HistoryItem[] = (historyRaw ?? []).map(normalizeHistoryItem);
+  const history: ImportHistoryBatch[] = (historyRaw ?? []).map(normalizeImportHistoryBatch);
 
   const handleUpload = async (file: File) => {
     const name = file.name.toLowerCase();
@@ -274,15 +321,30 @@ export default function BpclImportPage() {
         ) : history.length === 0 ? (
           <p className="p-6 text-sm text-[#7A9AB8] font-['Rajdhani']">No previous imports yet.</p>
         ) : (
-          <ul className="divide-y divide-[#E0E8F0] max-h-80 overflow-y-auto">
+          <ul className="divide-y divide-[#E0E8F0] max-h-[28rem] overflow-y-auto">
             {history.map((h) => (
-              <li key={h.id} className="px-5 py-3 flex flex-wrap justify-between gap-2 font-['Rajdhani'] text-sm">
-                <div>
-                  <span className="text-[#0D2847] font-medium">{h.fileName}</span>
-                  <span className="text-[#7A9AB8] ml-2">{h.createdAt ? formatBpclDate(h.createdAt) : '—'}</span>
+              <li key={h.id} className="px-5 py-3 space-y-1.5 font-['Rajdhani'] text-sm">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <span className="text-[#7A9AB8] text-xs uppercase font-['Barlow_Condensed'] tracking-wider">Batch</span>
+                    <span className="font-mono text-[#0D2847] font-medium ml-2">{h.importBatchId}</span>
+                  </div>
+                  <span className="text-[#7A9AB8] text-xs">
+                    {h.createdAt ? formatBpclDate(h.createdAt) : '—'}
+                  </span>
                 </div>
-                <div className="text-[#1A4A7A] text-xs">
-                  +{formatNumber(h.imported)} imported · {formatNumber(h.duplicatesSkipped)} dupes skipped
+                <div className="text-[#1A4A7A] text-xs flex flex-wrap gap-x-4 gap-y-1">
+                  <span>{formatNumber(h.count)} transactions</span>
+                  <span>
+                    Period:{' '}
+                    {h.txnMin || h.txnMax
+                      ? `${h.txnMin ? formatBpclDate(h.txnMin) : '—'} → ${h.txnMax ? formatBpclDate(h.txnMax) : '—'}`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="text-xs text-[#0D2847] flex flex-wrap gap-x-4 gap-y-1">
+                  <span>{formatNumber(h.totalLitres)} L</span>
+                  <span className="font-semibold text-[#16A34A]">{formatInrTwoDecimals(h.totalAmount)}</span>
                 </div>
               </li>
             ))}

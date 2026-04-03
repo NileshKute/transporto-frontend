@@ -89,6 +89,14 @@ export default function BpclCardsPage() {
 
   const cards: CardRow[] = useMemo(() => (cardsRaw ?? []).map(normalizeCard), [cardsRaw]);
 
+  const loadPeriodsForCard = async (cardId: string) => {
+    const res = await api.get(`/bpcl/cards/${cardId}`);
+    const body = res.data?.data ?? res.data;
+    const periods = body?.periods ?? body?.tagPeriods ?? [];
+    const list = Array.isArray(periods) ? periods.map(normalizePeriod) : [];
+    setPeriodRows(list);
+  };
+
   const summary = useMemo(() => {
     let b = 0,
       p = 0,
@@ -126,11 +134,7 @@ export default function BpclCardsPage() {
     setPeriodLoading(true);
     setPeriodRows([]);
     try {
-      const res = await api.get(`/bpcl/cards/${card.id}`);
-      const body = res.data?.data ?? res.data;
-      const periods = body?.periods ?? body?.tagPeriods ?? [];
-      const list = Array.isArray(periods) ? periods.map(normalizePeriod) : [];
-      setPeriodRows(list.length ? list : []);
+      await loadPeriodsForCard(card.id);
     } catch {
       toast.error('Could not load periods');
       setPeriodRows([]);
@@ -194,12 +198,33 @@ export default function BpclCardsPage() {
       setPeriodRows((r) => r.filter((x) => x.id !== row.id));
       return;
     }
+    const cardId = periodModalCard?.id;
     try {
-      await api.delete(`/bpcl/periods/${row.id}`);
-      setPeriodRows((r) => r.filter((x) => x.id !== row.id));
+      await api.delete(`/bpcl/periods/${row.id}`, {
+        transformResponse: [
+          (data: string) => {
+            if (data == null || data === '') return null;
+            try {
+              return JSON.parse(data);
+            } catch {
+              return null;
+            }
+          },
+        ],
+      });
       toast.success('Period removed');
-    } catch {
-      toast.error('Delete failed');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status && status >= 400) {
+        toast.error('Failed to delete period');
+      } else {
+        toast.success('Period removed');
+      }
+    } finally {
+      if (cardId) {
+        await loadPeriodsForCard(cardId).catch(() => {});
+      }
+      qc.invalidateQueries({ queryKey: ['bpcl-cards'] });
     }
   };
 

@@ -52,14 +52,32 @@ function normalizeTx(row: any): TxRow {
   };
 }
 
-function normalizeDashboard(d: any) {
-  if (!d || typeof d !== 'object') return null;
-  return {
-    totalTransactions: Number(d.totalTransactions ?? d.total_txns ?? d.count ?? 0),
-    totalLitres: Number(d.totalLitres ?? d.total_litres ?? d.totalLiters ?? 0),
-    totalAmount: Number(d.totalAmount ?? d.total_amount ?? 0),
-    avgRatePerLitre: Number(d.avgRatePerLitre ?? d.avg_rate_per_litre ?? d.avgRate ?? 0),
-  };
+/** Parse BPCL transactions list + totals + summary from various API shapes */
+function parseBpclTransactionsPayload(resData: any) {
+  const root = resData ?? {};
+  const body = root.data !== undefined && root.data !== null ? root.data : root;
+  const nestedRows = (body as Record<string, unknown>)?.data ?? (body as Record<string, unknown>)?.items;
+  const rowsRaw: any[] = Array.isArray(body) ? body : Array.isArray(nestedRows) ? nestedRows : [];
+
+  const nestedTotal =
+    typeof body === 'object' && body && !Array.isArray(body)
+      ? (body as Record<string, unknown>).total
+      : undefined;
+  const rawTotal = root.total ?? nestedTotal;
+  const totalParsed = Number(rawTotal);
+  const total = Number.isFinite(totalParsed) ? totalParsed : rowsRaw.length;
+
+  const summaryNested =
+    typeof body === 'object' && body && !Array.isArray(body) ? (body as Record<string, unknown>).summary : undefined;
+  const summaryRaw = root.summary ?? summaryNested ?? {};
+  const s = (summaryRaw && typeof summaryRaw === 'object' ? summaryRaw : {}) as Record<string, unknown>;
+
+  const totalTxns = Number(s.txnCount ?? s.txn_count ?? s.count ?? total);
+  const totalLitres = Number(s.litres ?? s.totalLitres ?? s.total_litres ?? 0);
+  const totalAmount = Number(s.amount ?? s.totalAmount ?? s.total_amount ?? 0);
+  const avgFromSummary = Number(s.avgRate ?? s.avg_rate ?? s.avgRatePerLitre ?? s.avg_rate_per_litre ?? 0);
+  const avgRate = totalLitres > 0 ? totalAmount / totalLitres : avgFromSummary;
+  return { rowsRaw, total, totalTxns, totalLitres, totalAmount, avgRate };
 }
 
 const inputClass =
@@ -108,34 +126,21 @@ export default function BpclTransactionsPage() {
     return p;
   }, [applied, page]);
 
-  const dashParams = useMemo(() => {
-    const p: Record<string, string> = {};
-    if (applied.startDate) p.startDate = applied.startDate;
-    if (applied.endDate) p.endDate = applied.endDate;
-    if (applied.tag) p.tag = applied.tag;
-    if (applied.vehicleNumber.trim()) p.vehicleNumber = applied.vehicleNumber.trim();
-    if (applied.cardNumber) p.cardNumber = applied.cardNumber;
-    if (applied.product) p.product = applied.product;
-    return p;
-  }, [applied]);
-
-  const { data: dashRes, isLoading: dashLoading } = useQuery({
-    queryKey: ['bpcl-dashboard', dashParams],
-    queryFn: async () => {
-      const res = await api.get('/bpcl/dashboard', { params: dashParams });
-      return normalizeDashboard(res.data?.data ?? res.data);
-    },
-  });
-
   const { data: txRes, isLoading: txLoading } = useQuery({
     queryKey: ['bpcl-transactions', txParams],
     queryFn: async () => {
       const res = await api.get('/bpcl/transactions', { params: txParams });
-      const body = res.data?.data ?? res.data;
-      const rows = Array.isArray(body) ? body : body?.data ?? body?.items ?? [];
-      const total = Number(res.data?.total ?? body?.total ?? rows.length);
+      const { rowsRaw, total, totalTxns, totalLitres, totalAmount, avgRate } = parseBpclTransactionsPayload(res.data);
       const totalPages = Math.max(1, Math.ceil(total / LIMIT));
-      return { rows: rows.map(normalizeTx), total, totalPages };
+      return {
+        rows: rowsRaw.map(normalizeTx),
+        total,
+        totalPages,
+        totalTxns,
+        totalLitres,
+        totalAmount,
+        avgRate,
+      };
     },
   });
 
@@ -156,11 +161,8 @@ export default function BpclTransactionsPage() {
   const exportCsv = async () => {
     setExporting(true);
     try {
-      const p: Record<string, string | number> = { ...txParams, page: 1, limit: 10000 };
-      delete p.page;
       const res = await api.get('/bpcl/transactions', { params: { ...txParams, page: 1, limit: 10000 } });
-      const body = res.data?.data ?? res.data;
-      const raw = Array.isArray(body) ? body : body?.data ?? body?.items ?? [];
+      const { rowsRaw: raw } = parseBpclTransactionsPayload(res.data);
       const list = raw.map(normalizeTx).sort((a: TxRow, b: TxRow) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const headers = ['Date', 'Vehicle', 'Card', 'Product', 'Litres', 'Rate', 'Amount', 'Station', 'City'];
       const csvRows = list.map((t: TxRow) => [
@@ -197,6 +199,14 @@ export default function BpclTransactionsPage() {
 
   const total = txRes?.total ?? 0;
   const totalPages = txRes?.totalPages ?? 1;
+  const totalTxns = txRes?.totalTxns ?? total;
+  const totalLitres = txRes?.totalLitres ?? 0;
+  const totalAmount = txRes?.totalAmount ?? 0;
+  const avgRate = txRes?.avgRate ?? 0;
+  const litresDisplay =
+    totalLitres > 0
+      ? `${Number(totalLitres).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`
+      : '0.00 L';
 
   return (
     <div className="space-y-5">
@@ -293,39 +303,25 @@ export default function BpclTransactionsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {dashLoading ? (
+        {txLoading ? (
           <div className="col-span-full py-8 flex justify-center">
             <LoadingSpinner text="Loading summary…" />
           </div>
         ) : (
           <>
-            <StatCard
-              icon={ListOrdered}
-              iconColor="blue"
-              title="Total transactions"
-              value={formatNumber(dashRes?.totalTransactions ?? total)}
-            />
-            <StatCard
-              icon={Fuel}
-              iconColor="cyan"
-              title="Total litres"
-              value={`${formatNumber(dashRes?.totalLitres ?? 0)} L`}
-            />
+            <StatCard icon={ListOrdered} iconColor="blue" title="Total transactions" value={formatNumber(totalTxns)} />
+            <StatCard icon={Fuel} iconColor="cyan" title="Total litres" value={litresDisplay} />
             <StatCard
               icon={IndianRupee}
               iconColor="amber"
               title="Total amount"
-              value={formatInrTwoDecimals(dashRes?.totalAmount ?? 0)}
+              value={formatInrTwoDecimals(totalAmount)}
             />
             <StatCard
               icon={Gauge}
               iconColor="green"
               title="Avg rate / litre"
-              value={
-                dashRes?.avgRatePerLitre != null && dashRes.avgRatePerLitre > 0
-                  ? formatInrTwoDecimals(dashRes.avgRatePerLitre)
-                  : '—'
-              }
+              value={avgRate > 0 ? formatInrTwoDecimals(avgRate) : '—'}
             />
           </>
         )}
