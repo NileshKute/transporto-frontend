@@ -125,3 +125,20 @@ button, a, input, select, [role="button"] {
 .page-enter {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* G K Enterprise public site font utilities */
+.font-gk-bebas {
+  font-family: 'Bebas Neue', sans-serif;
+}
+.font-gk-barlow {
+  font-family: 'Barlow Condensed', sans-serif;
+}
+.font-gk-rajdhani {
+  font-family: 'Rajdhani', sans-serif;
+}
+
+/* Hero cold-chain dot pattern */
+.gk-hero-pattern {
+  background-image: radial-gradient(rgba(100, 181, 246, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
