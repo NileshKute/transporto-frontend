@@ -105,13 +105,12 @@ export default function ContactPage() {
           </h2>
           <div className="rounded-2xl overflow-hidden border border-[#E0E8F0] shadow-sm aspect-video bg-[#E0E8F0]">
             <iframe
-              src="https://maps.google.com/maps?q=19.051503,73.103799&z=15&output=embed"
+              src="https://maps.google.com/maps?q=19.051379,73.103869&z=15&output=embed"
               width="100%"
               height="400"
               style={{ border: 0, borderRadius: '12px' }}
               allowFullScreen
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
               title="G K Enterprise Location"
             />
           </div>
