@@ -105,11 +105,14 @@ export default function ContactPage() {
           </h2>
           <div className="rounded-2xl overflow-hidden border border-[#E0E8F0] shadow-sm aspect-video bg-[#E0E8F0]">
             <iframe
-              title="G K Enterprise — Taloja, Navi Mumbai"
-              src="https://maps.google.com/maps?q=19.0478,73.1200&z=14&output=embed"
-              className="w-full h-full min-h-[280px] border-0"
+              src="https://maps.google.com/maps?q=19.051503,73.103799&z=15&output=embed"
+              width="100%"
+              height="400"
+              style={{ border: 0, borderRadius: '12px' }}
+              allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
+              title="G K Enterprise Location"
             />
           </div>
         </RevealOnScroll>
