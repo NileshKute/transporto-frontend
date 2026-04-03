@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings,
+  BookOpen, Wallet, Settings, Upload, CreditCard,
 } from 'lucide-react';
 
 const navGroups = [
@@ -22,6 +22,14 @@ const navGroups = [
       { href: '/trips', icon: Route, label: 'Trips' },
       { href: '/fuel', icon: Fuel, label: 'Fuel' },
     ]
+  },
+  {
+    label: 'FUEL',
+    items: [
+      { href: '/bpcl', icon: Fuel, label: 'BPCL Transactions' },
+      { href: '/bpcl/import', icon: Upload, label: 'Import BPCL Data' },
+      { href: '/bpcl/cards', icon: CreditCard, label: 'Card Management' },
+    ],
   },
   {
     label: 'MONITORING',
@@ -74,6 +82,9 @@ function getPageTitle(pathname: string) {
     '/drivers': 'Drivers',
     '/trips': 'Trips',
     '/fuel': 'Fuel',
+    '/bpcl': 'BPCL Transactions',
+    '/bpcl/import': 'Import BPCL Data',
+    '/bpcl/cards': 'Card Management',
     '/maintenance': 'Maintenance',
     '/emergencies': 'Emergencies',
     '/insurance': 'Insurance',
@@ -142,6 +153,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     if (pathname.startsWith('/trips')) { items.push({ label: 'Trips', href: '/trips' }); return items; }
     if (pathname.startsWith('/fuel')) { items.push({ label: 'Fuel', href: '/fuel' }); return items; }
+    if (pathname.startsWith('/bpcl')) {
+      if (pathname === '/bpcl') {
+        items.push({ label: 'BPCL Transactions', href: '/bpcl' });
+        return items;
+      }
+      items.push({ label: 'BPCL', href: '/bpcl' });
+      if (pathname === '/bpcl/import') items.push({ label: 'Import BPCL Data' });
+      else if (pathname === '/bpcl/cards') items.push({ label: 'Card Management' });
+      return items;
+    }
     if (pathname.startsWith('/maintenance')) { items.push({ label: 'Maintenance', href: '/maintenance' }); return items; }
     if (pathname.startsWith('/emergencies')) { items.push({ label: 'Emergencies', href: '/emergencies' }); return items; }
     if (pathname.startsWith('/insurance')) { items.push({ label: 'Insurance', href: '/insurance' }); return items; }

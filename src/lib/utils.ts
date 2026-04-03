@@ -23,6 +23,26 @@ export const formatDate = (date: string | Date | null | undefined): string => {
   return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+/** Display as 01-Apr-2025 */
+export function formatBpclDate(date: string | Date | null | undefined): string {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return '—';
+  const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${day}-${mon}-${d.getFullYear()}`;
+}
+
+/** Indian currency with 2 decimals, e.g. ₹1,52,000.00 */
+export function formatInrTwoDecimals(amount: number | null | undefined): string {
+  if (amount == null || Number.isNaN(Number(amount))) return '₹0.00';
+  const formatted = Number(amount).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+}
+
 export const formatDateTime = (date: string | Date | null | undefined): string => {
   if (!date) return '—';
   return new Date(date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
