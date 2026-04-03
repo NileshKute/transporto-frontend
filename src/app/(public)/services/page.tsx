@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
+import ClientLogos from '@/components/ClientLogos';
 import { RevealOnScroll } from '@/components/public/RevealOnScroll';
 
 export const metadata: Metadata = {
@@ -17,14 +19,24 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function ServicesPage() {
   return (
-    <div className="pt-20 pb-16">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 pb-0">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
         <RevealOnScroll>
           <h1 className="font-gk-bebas text-5xl md:text-6xl text-[#0D2847] tracking-wide">Our Services</h1>
         </RevealOnScroll>
 
         <RevealOnScroll className="mt-12 space-y-4">
           <SectionTitle>Cold chain transport</SectionTitle>
+          <div className="relative w-full h-52 rounded-xl overflow-hidden bg-[#E0E8F0] shadow-md mt-2">
+            <Image
+              src="/images/fleet/reefer-interior.jpg"
+              alt="Reefer interior with temperature-controlled cooling"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 48rem"
+              loading="lazy"
+            />
+          </div>
           <p className="font-gk-rajdhani text-[#1A4A7A]">Temperature-controlled logistics for:</p>
           <ul className="font-gk-rajdhani text-[#0D2847] list-disc pl-5 space-y-2">
             <li>Frozen foods (-25°C to -18°C)</li>
@@ -44,6 +56,16 @@ export default function ServicesPage() {
 
         <RevealOnScroll className="mt-14 space-y-4">
           <SectionTitle>General fleet transport</SectionTitle>
+          <div className="relative w-full h-52 rounded-xl overflow-hidden bg-[#E0E8F0] shadow-md mt-2">
+            <Image
+              src="/images/fleet/bolero-reefer-side.jpg"
+              alt="Mahindra Bolero reefer for general fleet and last-mile"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 48rem"
+              loading="lazy"
+            />
+          </div>
           <p className="font-gk-rajdhani text-[#1A4A7A]">Reliable freight services:</p>
           <ul className="font-gk-rajdhani text-[#0D2847] list-disc pl-5 space-y-2">
             <li>Full truck load (FTL)</li>
@@ -55,6 +77,16 @@ export default function ServicesPage() {
 
         <RevealOnScroll className="mt-14 space-y-4">
           <SectionTitle>Fleet management technology</SectionTitle>
+          <div className="relative w-full h-52 rounded-xl overflow-hidden bg-[#E0E8F0] shadow-md mt-2">
+            <Image
+              src="/images/fleet/gk-branded-truck.jpg"
+              alt="G K Enterprise branded truck — fleet operations"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 48rem"
+              loading="lazy"
+            />
+          </div>
           <p className="font-gk-rajdhani text-[#0D2847] leading-relaxed">
             Our in-house Transporto ERP system supports day-to-day operations with:
           </p>
@@ -79,6 +111,8 @@ export default function ServicesPage() {
           </ul>
         </RevealOnScroll>
       </div>
+
+      <ClientLogos />
     </div>
   );
 }

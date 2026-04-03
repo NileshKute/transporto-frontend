@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { RevealOnScroll } from '@/components/public/RevealOnScroll';
 import { ContactForm } from '@/components/public/ContactForm';
 
@@ -84,6 +85,16 @@ export default function ContactPage() {
             <p className="font-gk-rajdhani text-sm text-[#1A4A7A] mt-2 mb-6">
               Opens your email client with the details filled in.
             </p>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden bg-[#E0E8F0] mb-8 shadow-md">
+              <Image
+                src="/images/fleet/truck-back-branding.jpg"
+                alt="G K Enterprise branded reefer"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                loading="lazy"
+              />
+            </div>
             <ContactForm />
           </RevealOnScroll>
         </div>

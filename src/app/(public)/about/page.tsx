@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
+import ClientLogos from '@/components/ClientLogos';
 import { RevealOnScroll } from '@/components/public/RevealOnScroll';
 
 export const metadata: Metadata = {
@@ -16,8 +18,8 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <div className="pt-20 pb-16">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 pb-0">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
         <RevealOnScroll>
           <h1 className="font-gk-bebas text-5xl md:text-6xl text-[#0D2847] tracking-wide">About G K Enterprise</h1>
           <p className="font-gk-rajdhani text-lg text-[#1A4A7A] mt-6 leading-relaxed">
@@ -63,6 +65,26 @@ export default function AboutPage() {
           </ul>
         </RevealOnScroll>
 
+        <RevealOnScroll className="mt-12">
+          <div className="rounded-xl overflow-hidden shadow-xl border border-[#E0E8F0]">
+            <div className="relative w-full h-80 bg-[#E0E8F0]">
+              <Image
+                src="/images/fleet/fleet-lineup-drivers.jpg"
+                alt="G K Enterprise team and fleet"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 48rem"
+                loading="lazy"
+              />
+            </div>
+            <div className="bg-[#0D2847] text-white p-6 text-center">
+              <p className="font-gk-barlow text-lg font-semibold uppercase tracking-wide">
+                Our fleet &amp; team — ready to serve
+              </p>
+            </div>
+          </div>
+        </RevealOnScroll>
+
         <RevealOnScroll className="mt-14">
           <h2 className="font-gk-barlow text-sm font-bold uppercase tracking-[0.25em] text-[#1565C0]">Proprietor</h2>
           <div className="mt-6 rounded-2xl border border-[#E0E8F0] bg-gradient-to-b from-[#F5F7FA] to-white p-8 shadow-sm">
@@ -74,6 +96,8 @@ export default function AboutPage() {
           </div>
         </RevealOnScroll>
       </div>
+
+      <ClientLogos />
     </div>
   );
 }

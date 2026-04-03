@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Gauge, Phone, Snowflake, Truck } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, Phone } from 'lucide-react';
+import ClientLogos from '@/components/ClientLogos';
 import { getToken } from '@/lib/auth';
 import { RevealOnScroll } from '@/components/public/RevealOnScroll';
-import { cn } from '@/lib/utils';
 
 function useAnimatedInt(target: number, durationMs: number, active: boolean) {
   const [value, setValue] = useState(0);
@@ -105,40 +106,43 @@ export function HomePageContent() {
 
   return (
     <>
-      <section className="relative min-h-[88vh] flex flex-col justify-center pt-24 pb-16 overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(135deg, #0D2847 0%, #1A4A7A 50%, #1565C0 100%), radial-gradient(ellipse 80% 55% at 75% 15%, rgba(66, 165, 245, 0.22), transparent)',
-          }}
-        />
-        <div className="absolute inset-0 gk-hero-pattern opacity-40 pointer-events-none" />
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 w-full">
+      <section className="relative h-[600px] md:h-[700px] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src="/images/fleet/hero-fleet.jpg"
+            alt="G K Enterprise fleet"
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0D2847]/90 to-[#1A4A7A]/70" />
+        </div>
+        <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 text-center text-white flex flex-col items-center justify-center h-full pt-16 pb-10">
           <RevealOnScroll>
             {loggedIn && (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-lg bg-white/15 border border-white/25 text-white font-gk-barlow text-sm font-semibold uppercase tracking-wider hover:bg-white/25 transition-colors"
+                className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-lg bg-white/15 border border-white/25 text-white font-gk-barlow text-sm font-semibold uppercase tracking-wider hover:bg-white/25 transition-colors"
               >
                 Go to Dashboard
                 <ArrowRight className="w-4 h-4" />
               </Link>
             )}
-            <p className="font-gk-bebas text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.08em] drop-shadow-sm">
+            <h1 className="font-gk-bebas text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.08em] drop-shadow-sm">
               G K ENTERPRISE
-            </p>
+            </h1>
             <p className="font-gk-barlow text-lg sm:text-xl md:text-2xl font-semibold uppercase tracking-[0.2em] text-[#64B5F6] mt-3">
               Fleet Owners &amp; Cold Chain Logistics Specialists
             </p>
-            <p className="font-gk-barlow text-xl sm:text-2xl md:text-3xl font-semibold text-white/95 mt-8 max-w-3xl leading-snug">
+            <p className="font-gk-barlow text-xl sm:text-2xl md:text-3xl font-semibold text-white/95 mt-8 max-w-3xl mx-auto leading-snug">
               Reliable cold chain &amp; fleet solutions for your business
             </p>
-            <p className="font-gk-rajdhani text-base sm:text-lg text-white/85 mt-4 max-w-2xl leading-relaxed">
+            <p className="font-gk-rajdhani text-base sm:text-lg text-white/85 mt-4 max-w-2xl mx-auto leading-relaxed">
               Trusted temperature-controlled transport across India. Your cargo, our commitment — delivered fresh,
               every time.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 mt-10">
+            <div className="flex flex-col sm:flex-row gap-4 mt-10 justify-center">
               <Link
                 href="/services"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg bg-[#42A5F5] text-white font-gk-barlow font-bold uppercase tracking-wider hover:bg-[#64B5F6] shadow-lg shadow-[#0D2847]/30 transition-transform hover:-translate-y-0.5"
@@ -172,41 +176,42 @@ export function HomePageContent() {
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             {[
               {
-                icon: Snowflake,
+                src: '/images/fleet/reefer-truck-side.jpg',
+                alt: 'Cold chain reefer truck',
                 title: 'Cold Chain Transport',
+                emoji: '❄️',
                 body: 'Temperature-controlled logistics for perishable goods, pharmaceuticals, and frozen products.',
-                accent: 'from-[#42A5F5]/20 to-transparent',
               },
               {
-                icon: Truck,
+                src: '/images/fleet/bolero-reefer-side.jpg',
+                alt: 'General fleet Bolero reefer',
                 title: 'General Fleet Transport',
+                emoji: '🚛',
                 body: 'Reliable freight services across Maharashtra and pan-India routes.',
-                accent: 'from-[#1565C0]/15 to-transparent',
               },
               {
-                icon: Gauge,
+                src: '/images/fleet/reefer-interior.jpg',
+                alt: 'Reefer interior temperature monitoring',
                 title: 'Fleet Management',
+                emoji: '📊',
                 body: 'Real-time GPS tracking, temperature monitoring, and digital operations.',
-                accent: 'from-[#64B5F6]/25 to-transparent',
               },
             ].map((card, i) => (
               <RevealOnScroll key={card.title} delayMs={i * 80}>
-                <div
-                  className={cn(
-                    'h-full rounded-2xl border border-[#E0E8F0] bg-white p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none',
-                      card.accent
-                    )}
-                  />
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#0D2847] to-[#1565C0] flex items-center justify-center text-white mb-5">
-                      <card.icon className="w-7 h-7" aria-hidden />
-                    </div>
+                <div className="h-full rounded-2xl border border-[#E0E8F0] bg-white overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div className="relative h-48 w-full bg-[#E0E8F0]">
+                    <Image
+                      src={card.src}
+                      alt={card.alt}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-6">
                     <h3 className="font-gk-barlow text-xl font-bold uppercase tracking-wide text-[#0D2847]">
+                      <span aria-hidden>{card.emoji} </span>
                       {card.title}
                     </h3>
                     <p className="font-gk-rajdhani text-[#1A4A7A] mt-3 leading-relaxed">{card.body}</p>
@@ -239,6 +244,8 @@ export function HomePageContent() {
           </ul>
         </div>
       </section>
+
+      <ClientLogos />
 
       <section className="py-16 md:py-20 relative overflow-hidden">
         <div
