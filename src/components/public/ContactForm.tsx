@@ -2,135 +2,132 @@
 
 import { useState, type FormEvent } from 'react';
 
-const services = [
-  'Cold chain transport',
-  'General fleet',
-  'Fleet management / technology',
-  'Other',
-];
+const inputClass =
+  'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[#42A5F5] focus:outline-none';
 
 export function ContactForm() {
-  const [name, setName] = useState('');
-  const [company, setCompany] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [service, setService] = useState(services[0]);
-  const [message, setMessage] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+  });
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  function handleSubmit(e: FormEvent) {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const body = [
-      `Name: ${name}`,
-      `Company: ${company}`,
-      `Phone: ${phone}`,
-      `Email: ${email}`,
-      `Service: ${service}`,
-      '',
-      message,
-    ].join('\n');
-    const subject = encodeURIComponent(`Website enquiry — ${service}`);
-    const mailto = `mailto:ganesh@gkenterprise.in?subject=${subject}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
-  }
+
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      alert('Please fill in Name, Email and Message');
+      return;
+    }
+
+    setStatus('sending');
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: '57da9aec-329b-4966-b607-c4e62df2f68f',
+          from_name: 'GK Enterprise Website',
+          subject: formData.subject || `New enquiry from ${formData.name}`,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || 'Not provided',
+          message: formData.message,
+          ccemail: 'admin@gkenterprise.in',
+        }),
+      });
+
+      const result = (await response.json()) as { success?: boolean };
+
+      if (result.success) {
+        setStatus('success');
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setTimeout(() => setStatus('idle'), 5000);
+      } else {
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 5000);
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 5000);
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
-      <div>
-        <label htmlFor="gk-name" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-          Name
-        </label>
-        <input
-          id="gk-name"
-          name="name"
-          required
-          value={name}
-          onChange={(ev) => setName(ev.target.value)}
-          className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-          autoComplete="name"
-        />
-      </div>
-      <div>
-        <label htmlFor="gk-company" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-          Company
-        </label>
-        <input
-          id="gk-company"
-          name="company"
-          value={company}
-          onChange={(ev) => setCompany(ev.target.value)}
-          className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-          autoComplete="organization"
-        />
-      </div>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="gk-phone" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-            Phone
-          </label>
-          <input
-            id="gk-phone"
-            name="phone"
-            type="tel"
-            required
-            value={phone}
-            onChange={(ev) => setPhone(ev.target.value)}
-            className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-            autoComplete="tel"
-          />
-        </div>
-        <div>
-          <label htmlFor="gk-email" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-            Email
-          </label>
-          <input
-            id="gk-email"
-            name="email"
-            type="email"
-            required
-            value={email}
-            onChange={(ev) => setEmail(ev.target.value)}
-            className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-            autoComplete="email"
-          />
-        </div>
-      </div>
-      <div>
-        <label htmlFor="gk-service" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-          Service
-        </label>
-        <select
-          id="gk-service"
-          name="service"
-          value={service}
-          onChange={(ev) => setService(ev.target.value)}
-          className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-        >
-          {services.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label htmlFor="gk-message" className="block font-gk-barlow text-xs font-bold uppercase tracking-wider text-[#0D2847] mb-1.5">
-          Message
-        </label>
-        <textarea
-          id="gk-message"
-          name="message"
-          rows={4}
-          value={message}
-          onChange={(ev) => setMessage(ev.target.value)}
-          className="rounded-lg border border-[#E0E8F0] bg-white px-4 py-3 font-gk-rajdhani w-full"
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Hidden fields for Web3Forms (payload sent via fetch) */}
+
+      <input
+        type="text"
+        placeholder="Your Name *"
+        required
+        value={formData.name}
+        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+        className={inputClass}
+        autoComplete="name"
+      />
+
+      <input
+        type="email"
+        placeholder="Your Email *"
+        required
+        value={formData.email}
+        onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+        className={inputClass}
+        autoComplete="email"
+      />
+
+      <input
+        type="tel"
+        placeholder="Your Phone"
+        value={formData.phone}
+        onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+        className={inputClass}
+        autoComplete="tel"
+      />
+
+      <input
+        type="text"
+        placeholder="Subject"
+        value={formData.subject}
+        onChange={(e) => setFormData((prev) => ({ ...prev, subject: e.target.value }))}
+        className={inputClass}
+        autoComplete="off"
+      />
+
+      <textarea
+        placeholder="Your Message *"
+        required
+        rows={5}
+        value={formData.message}
+        onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
+        className={`${inputClass} resize-none`}
+      />
+
       <button
         type="submit"
-        className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-[#1565C0] text-white font-gk-barlow font-bold uppercase tracking-wider hover:bg-[#0D2847] transition-colors"
+        disabled={status === 'sending'}
+        className="w-full py-3 bg-[#1565C0] hover:bg-[#0D2847] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Send message
+        {status === 'sending' ? 'Sending...' : 'Send Message'}
       </button>
+
+      {status === 'success' && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-center">
+          ✅ Message sent successfully! We will get back to you soon.
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
+          ❌ Failed to send message. Please try again or email us directly.
+        </div>
+      )}
     </form>
   );
 }

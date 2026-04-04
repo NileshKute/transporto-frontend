@@ -83,7 +83,7 @@ export default function ContactPage() {
               Send us a message
             </h2>
             <p className="font-gk-rajdhani text-sm text-[#1A4A7A] mt-2 mb-6">
-              Opens your email client with the details filled in.
+              Send us a message using the form below — we will reply as soon as we can.
             </p>
             <div className="relative w-full h-48 rounded-xl overflow-hidden bg-[#E0E8F0] mb-8 shadow-md">
               <Image
