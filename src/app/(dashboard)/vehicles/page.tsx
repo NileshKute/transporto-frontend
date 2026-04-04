@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatKm, safe } from '@/lib/utils';
 import { Plus, Eye, Pencil, Trash2, Search, ChevronDown } from 'lucide-react';
+import { VerifyRcForVehicleButton, VerifyRcAutofillButton } from '@/components/vehicles/RcVerifyButtons';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -34,19 +35,45 @@ function CollapsibleSection({ title, children }: { title: string; children: Reac
   );
 }
 
-function VehicleFormFields({ form, setForm }: { form: any, setForm: any }) {
-  const field = (name: string, label: string, type = 'text', opts?: any) => {
-    const val = type === 'date' && form[name] ? String(form[name]).split('T')[0] : (form[name] ?? '');
+function VehicleFormFields({
+  form,
+  setForm,
+  extraRegActions,
+}: {
+  form: Record<string, unknown>;
+  setForm: Dispatch<SetStateAction<Record<string, unknown>>>;
+  extraRegActions?: ReactNode;
+}) {
+  const field = (name: string, label: string, type = 'text', opts?: { options?: string[]; placeholder?: string }) => {
+    const raw = form[name];
+    const val = type === 'date' && raw ? String(raw).split('T')[0] : ((raw as string | number | undefined) ?? '');
     return (
       <div>
         <label className="block font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1.5">{label}</label>
         {opts?.options ? (
-          <select value={form[name] || ''} onChange={e => setForm((p: any) => ({ ...p, [name]: e.target.value }))}>
+          <select
+            value={(raw as string) || ''}
+            onChange={(e) => setForm((p) => ({ ...p, [name]: e.target.value }))}
+          >
             <option value="">Select {label}</option>
-            {opts.options.map((o: string) => <option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
+            {opts.options.map((o: string) => (
+              <option key={o} value={o}>
+                {o.replace(/_/g, ' ')}
+              </option>
+            ))}
           </select>
         ) : (
-          <input type={type} value={val} onChange={e => setForm((p: any) => ({ ...p, [name]: type === 'number' ? Number(e.target.value) : e.target.value }))} placeholder={opts?.placeholder} />
+          <input
+            type={type}
+            value={val as string | number}
+            onChange={(e) =>
+              setForm((p) => ({
+                ...p,
+                [name]: type === 'number' ? Number(e.target.value) : e.target.value,
+              }))
+            }
+            placeholder={opts?.placeholder}
+          />
         )}
       </div>
     );
@@ -55,7 +82,12 @@ function VehicleFormFields({ form, setForm }: { form: any, setForm: any }) {
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
       <div className="grid grid-cols-2 gap-4">
-        {field('regNumber', 'Reg Number *', 'text', { placeholder: 'DL01AB1234' })}
+        <div className="col-span-2 flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[200px]">
+            {field('regNumber', 'Reg Number *', 'text', { placeholder: 'DL01AB1234' })}
+          </div>
+          {extraRegActions ? <div className="shrink-0 pb-0.5">{extraRegActions}</div> : null}
+        </div>
         {field('type', 'Vehicle Type *', 'text', { options: VEHICLE_TYPES })}
         {field('make', 'Make *', 'text', { placeholder: 'Tata' })}
         {field('model', 'Model *', 'text', { placeholder: 'Prima 4928' })}
@@ -114,9 +146,9 @@ export default function VehiclesPage() {
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editVehicle, setEditVehicle] = useState<any>(null);
+  const [editVehicle, setEditVehicle] = useState<Record<string, unknown> | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<Record<string, unknown>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ['vehicles', page, search, status, type],
@@ -124,7 +156,8 @@ export default function VehiclesPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (payload: any) => editVehicle ? api.put(`/vehicles/${editVehicle.id}`, payload) : api.post('/vehicles', payload),
+    mutationFn: (payload: Record<string, unknown>) =>
+      editVehicle ? api.put(`/vehicles/${editVehicle.id}`, payload) : api.post('/vehicles', payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['vehicles'] }); toast.success(editVehicle ? 'Vehicle updated' : 'Vehicle created'); setModalOpen(false); setForm({}); setEditVehicle(null); },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to save'),
   });
@@ -135,8 +168,16 @@ export default function VehiclesPage() {
     onError: () => toast.error('Failed to delete'),
   });
 
-  const openCreate = () => { setForm({ fuelType: 'DIESEL' }); setEditVehicle(null); setModalOpen(true); };
-  const openEdit = (v: any) => { setForm({ ...v }); setEditVehicle(v); setModalOpen(true); };
+  const openCreate = () => {
+    setForm({ fuelType: 'DIESEL' });
+    setEditVehicle(null);
+    setModalOpen(true);
+  };
+  const openEdit = (v: Record<string, unknown>) => {
+    setForm({ ...v });
+    setEditVehicle(v);
+    setModalOpen(true);
+  };
 
   const exportVehicles = async () => {
     try {
@@ -250,6 +291,12 @@ export default function VehiclesPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
                         <Link href={`/vehicles/${v.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></Link>
+                        <VerifyRcForVehicleButton
+                          vehicleId={String(v.id ?? '')}
+                          currentVehicle={v as Record<string, unknown>}
+                          onApplied={() => void qc.invalidateQueries({ queryKey: ['vehicles'] })}
+                          compact
+                        />
                         <button onClick={() => openEdit(v)} className="p-2 text-[#1A4A7A] hover:text-[#0D2847] hover:bg-[#F4F6F8] rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
                         <button onClick={() => setDeleteId(v.id)} className="p-2 text-[#1A4A7A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -265,7 +312,30 @@ export default function VehiclesPage() {
 
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditVehicle(null); }} title={editVehicle ? 'Edit Vehicle' : 'Add Vehicle'} size="lg">
         <div className="space-y-4">
-          <VehicleFormFields form={form} setForm={setForm} />
+          <VehicleFormFields
+            form={form}
+            setForm={setForm}
+            extraRegActions={
+              !editVehicle ? (
+                <VerifyRcAutofillButton regNumber={String(form.regNumber ?? '')} currentForm={form} setForm={setForm} />
+              ) : editVehicle.id != null ? (
+                <VerifyRcForVehicleButton
+                  vehicleId={String(editVehicle.id)}
+                  currentVehicle={form}
+                  onApplied={async () => {
+                    await qc.invalidateQueries({ queryKey: ['vehicles'] });
+                    try {
+                      const res = await api.get(`/vehicles/${editVehicle.id}`);
+                      const data = (res.data as { data?: Record<string, unknown> })?.data ?? (res.data as Record<string, unknown>);
+                      if (data && typeof data === 'object') setForm({ ...data });
+                    } catch {
+                      /* form left unchanged */
+                    }
+                  }}
+                />
+              ) : null
+            }
+          />
           <div className="flex gap-3 pt-2">
             <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-[#1A4A7A] border border-[#cbd5e1] rounded-lg hover:bg-[#f1f5f9] transition-colors">Cancel</button>
             <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="flex-1 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] disabled:opacity-50 rounded-lg transition-colors">

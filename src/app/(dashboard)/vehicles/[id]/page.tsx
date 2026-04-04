@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatCurrency, formatDate, formatDateDdMmYyyy, formatInrTwoDecimals, formatKm, safe, safeNumber } from '@/lib/utils';
 import { ArrowLeft, Truck, Shield, FileCheck, Car, Receipt, ScrollText } from 'lucide-react';
+import { VerifyRcForVehicleButton } from '@/components/vehicles/RcVerifyButtons';
 
 const TABS = ['Trips', 'Fuel', 'Maintenance', 'Insurance', 'Doc Status', 'Documents'];
 
@@ -61,6 +62,7 @@ function DocCard({ title, icon: Icon, fields }: { title: string; icon: any; fiel
 export default function VehicleDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const qc = useQueryClient();
   const [tab, setTab] = useState('Trips');
   const [maintCategory, setMaintCategory] = useState<'TRUCK' | 'REEFER'>('TRUCK');
   const vehicleId = id != null ? String(id) : '';
@@ -123,10 +125,17 @@ export default function VehicleDetailPage() {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="p-2 text-[#7A9AB8] hover:text-[#0D2847] hover:bg-[#F4F6F8] rounded-lg transition-colors"><ArrowLeft className="w-4 h-4" /></button>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="p-2 bg-[#42A5F5]/10 rounded-xl"><Truck className="w-5 h-5 text-[#42A5F5]" /></div>
-          <div>
-            <h2 className="text-xl font-bold text-[#0D2847] font-mono">{safe(v.regNumber)}</h2>
+        <div className="flex items-center gap-3 flex-1 min-w-0 flex-wrap">
+          <div className="p-2 bg-[#42A5F5]/10 rounded-xl shrink-0"><Truck className="w-5 h-5 text-[#42A5F5]" /></div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-[#0D2847] font-mono">{safe(v.regNumber)}</h2>
+              <VerifyRcForVehicleButton
+                vehicleId={vehicleId}
+                currentVehicle={v as Record<string, unknown>}
+                onApplied={() => void qc.invalidateQueries({ queryKey: ['vehicle', id] })}
+              />
+            </div>
             <p className="text-sm text-[#7A9AB8]">
               {safe(v.make)} {safe(v.model)} • {v.year != null && typeof v.year !== 'object' ? String(v.year) : '—'}
             </p>
