@@ -7,6 +7,7 @@ export function vehicleReg(v: GpsVehicle): string {
 export interface GpsVehicle {
   regNumber?: string;
   registrationNumber?: string;
+  geoTrackerKey?: string;
   latitude?: number;
   longitude?: number;
   speed?: number;

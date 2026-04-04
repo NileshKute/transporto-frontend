@@ -143,8 +143,46 @@ button, a, input, select, [role="button"] {
   background-size: 24px 24px;
 }
 
-/* Leaflet divIcon markers — remove default square background */
-.leaflet-div-icon.gps-leaflet-marker {
+/* GPS map — marker pulse (used by Leaflet divIcon HTML) */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.custom-truck-marker {
   background: transparent !important;
   border: none !important;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 14px 16px !important;
+}
+
+.custom-popup .leaflet-popup-tip {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: white !important;
+  color: #0D2847 !important;
+  border: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 16px !important;
 }
