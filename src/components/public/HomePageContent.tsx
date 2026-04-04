@@ -7,6 +7,7 @@ import { ArrowRight, Phone } from 'lucide-react';
 import ClientLogos from '@/components/ClientLogos';
 import { getToken } from '@/lib/auth';
 import { RevealOnScroll } from '@/components/public/RevealOnScroll';
+import { TrustedBySection } from '@/components/public/TrustedBySection';
 
 function useAnimatedInt(target: number, durationMs: number, active: boolean) {
   const [value, setValue] = useState(0);
@@ -160,6 +161,8 @@ export function HomePageContent() {
           </RevealOnScroll>
         </div>
       </section>
+
+      <TrustedBySection />
 
       <StatsSection />
 
