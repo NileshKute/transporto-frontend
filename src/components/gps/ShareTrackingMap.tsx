@@ -57,14 +57,14 @@ function createShareMarkerIcon(
   const spd = options.speed != null ? Number(options.speed) : NaN;
   const pulse = shareStatusPulseColor(st);
 
-  const tempBadge =
-    options.temperature != null && !Number.isNaN(t)
-      ? `<div style="position:absolute;top:-4px;right:-8px;z-index:2;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:8px;font-weight:700;padding:1px 3px;border-radius:6px;border:1px solid #fff;">${t.toFixed(0)}°</div>`
-      : '';
+  const showTemp = options.temperature != null && !Number.isNaN(t) && t !== 0;
+  const tempBadge = showTemp
+    ? `<div style="position:absolute;top:1px;right:4px;z-index:4;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:6px;border:1px solid #fff;line-height:1.15;">${t.toFixed(0)}°</div>`
+    : '';
 
   const speedBadge =
     st === 'MOVING' && !Number.isNaN(spd) && spd > 0
-      ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);z-index:2;background:#0D2847;color:#fff;font-size:7px;font-weight:600;padding:1px 3px;border-radius:4px;border:1px solid #fff;">${Math.round(spd)}</div>`
+      ? `<div style="position:absolute;bottom:5px;right:5px;z-index:4;background:#0D2847;color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:5px;border:1px solid #fff;line-height:1.15;">${Math.round(spd)}</div>`
       : '';
 
   const pulseRing =

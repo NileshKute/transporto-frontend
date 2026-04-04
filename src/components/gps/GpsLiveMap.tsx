@@ -38,23 +38,24 @@ function createLiveVehicleIcon(v: GpsVehicle): L.DivIcon {
   const t = v.temperature != null ? Number(v.temperature) : NaN;
   const spd = v.speed != null ? Number(v.speed) : NaN;
   const pulse = statusPulseColor(status);
-  const tempBadge =
-    v.temperature != null && !Number.isNaN(t)
-      ? `<div style="position:absolute;top:-4px;right:-8px;z-index:2;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;white-space:nowrap;border:1.5px solid #fff;line-height:1.2;">${t.toFixed(0)}°</div>`
-      : '';
+  const showTemp = v.temperature != null && !Number.isNaN(t) && t !== 0;
+  const tempBadge = showTemp
+    ? `<div style="position:absolute;top:1px;right:4px;z-index:4;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:6px;white-space:nowrap;border:1px solid #fff;line-height:1.15;">${t.toFixed(0)}°</div>`
+    : '';
   const speedBadge =
     status === 'MOVING' && !Number.isNaN(spd) && spd > 0
-      ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);z-index:2;background:#0D2847;color:#fff;font-size:8px;font-weight:600;padding:1px 4px;border-radius:6px;white-space:nowrap;border:1px solid #fff;">${Math.round(spd)}km/h</div>`
+      ? `<div style="position:absolute;bottom:17px;right:5px;z-index:4;background:#0D2847;color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:5px;white-space:nowrap;border:1px solid #fff;line-height:1.15;">${Math.round(spd)}</div>`
       : '';
   const pulseRing =
     status === 'MOVING'
-      ? `<div style="position:absolute;top:2px;left:2px;width:52px;height:52px;border-radius:50%;background:${pulse}33;animation:pulse 2s infinite;pointer-events:none;z-index:0;"></div>`
+      ? `<div style="position:absolute;left:50%;top:22px;width:50px;height:50px;margin-left:-25px;margin-top:-25px;border-radius:50%;background:${pulse}33;animation:pulse 2s infinite;pointer-events:none;z-index:0;"></div>`
       : '';
 
   return buildTruckMarkerDivIcon({
     iconType: v.iconType,
     status,
     direction: v.direction,
+    mapRegLabel: reg(v),
     badges: { tempHtml: tempBadge, speedHtml: speedBadge, pulseRingHtml: pulseRing },
   });
 }
@@ -221,7 +222,7 @@ export function GpsLiveMap({
       <MapViewSync vehicles={vehicles} selectedReg={selectedReg} />
       {mappable.map((v) => (
         <Marker
-          key={`${reg(v)}-${v.iconType ?? ''}-${v.direction ?? ''}-${String(v.status)}`}
+          key={`${reg(v)}-${v.iconType ?? ''}-${v.direction ?? ''}-${String(v.status)}-${v.temperature ?? ''}-${v.speed ?? ''}`}
           position={[v.latitude as number, v.longitude as number]}
           icon={createLiveVehicleIcon(v)}
           eventHandlers={{
