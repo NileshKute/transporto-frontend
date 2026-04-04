@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import type { GpsVehicle } from '@/components/gps/types';
 import { vehicleReg } from '@/components/gps/types';
 import { mapThemes, type MapThemeKey } from '@/components/gps/mapThemes';
+import { GpsShareLinksPanel } from '@/components/gps/GpsShareLinksPanel';
 
 const GpsLiveMap = dynamic(
   () => import('@/components/gps/GpsLiveMap').then((m) => m.GpsLiveMap),
@@ -31,7 +32,10 @@ function vehicleListKey(v: GpsVehicle, index: number): string {
   return v.regNumber || v.geoTrackerKey || v.registrationNumber || `v-${index}`;
 }
 
+type GpsMainTab = 'live' | 'share';
+
 export default function GpsLivePage() {
+  const [mainTab, setMainTab] = useState<GpsMainTab>('live');
   const [vehicles, setVehicles] = useState<GpsVehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +106,37 @@ export default function GpsLivePage() {
 
   return (
     <div className="space-y-4">
+      <div className="border-b border-[#E0E8F0]">
+        <nav className="flex gap-1 sm:gap-6" aria-label="GPS sections">
+          <button
+            type="button"
+            onClick={() => setMainTab('live')}
+            className={`pb-3 px-1 text-sm font-['Barlow_Condensed'] uppercase tracking-wider border-b-2 transition-colors ${
+              mainTab === 'live'
+                ? 'border-[#1565C0] text-[#1565C0] font-bold'
+                : 'border-transparent text-[#64748b] hover:text-[#0D2847]'
+            }`}
+          >
+            Live tracking
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab('share')}
+            className={`pb-3 px-1 text-sm font-['Barlow_Condensed'] uppercase tracking-wider border-b-2 transition-colors ${
+              mainTab === 'share'
+                ? 'border-[#1565C0] text-[#1565C0] font-bold'
+                : 'border-transparent text-[#64748b] hover:text-[#0D2847]'
+            }`}
+          >
+            Share links
+          </button>
+        </nav>
+      </div>
+
+      {mainTab === 'share' ? (
+        <GpsShareLinksPanel />
+      ) : (
+        <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
         <div>
           <h1 className="text-xl font-bold text-[#0D2847] font-['Oswald'] tracking-wide uppercase">
@@ -318,6 +353,8 @@ export default function GpsLivePage() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
