@@ -37,7 +37,6 @@ export function ContactForm() {
           email: formData.email,
           phone: formData.phone || 'Not provided',
           message: formData.message,
-          ccemail: 'admin@gkenterprise.in',
         }),
       });
 
