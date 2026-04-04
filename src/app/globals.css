@@ -143,16 +143,11 @@ button, a, input, select, [role="button"] {
   background-size: 24px 24px;
 }
 
-/* GPS map — marker pulse (used by Leaflet divIcon HTML) */
+/* GPS map — pulse animation (live map popup status dot only; not used on divIcon markers) */
 @keyframes pulse {
   0% { transform: scale(1); opacity: 0.6; }
   50% { transform: scale(1.4); opacity: 0; }
   100% { transform: scale(1); opacity: 0; }
-}
-
-.custom-truck-marker {
-  background: transparent !important;
-  border: none !important;
 }
 
 /* GPS — clean Leaflet markers (live, share, route playback) */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,30 +8,8 @@ import { vehicleReg as reg, type GpsVehicle } from './types';
 import { mapThemes, type MapThemeKey } from './mapThemes';
 import { buildCleanMarkerDivIcon } from './truckIcons';
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/** Leaflet marker: direction arrow + status-colored body + reg label only (no speed/temp/AC). */
-function createLiveVehicleIcon(args: {
-  iconType: GpsVehicle['iconType'];
-  status: GpsVehicle['status'];
-  direction: GpsVehicle['direction'];
-  mapRegLabel: string;
-}): L.DivIcon {
-  return buildCleanMarkerDivIcon({
-    iconType: args.iconType,
-    status: String(args.status || 'UNKNOWN'),
-    direction: args.direction,
-    mapRegLabel: args.mapRegLabel,
-  });
-}
-
-function createPopupContent(vehicle: GpsVehicle): string {
+/** Popup panel only — never mixed into Leaflet divIcon / marker HTML. */
+function GpsVehiclePopupBody({ vehicle }: { vehicle: GpsVehicle }) {
   const statusColors: Record<string, string> = {
     MOVING: '#22c55e',
     HALTED: '#ef4444',
@@ -54,53 +32,145 @@ function createPopupContent(vehicle: GpsVehicle): string {
           : '#ef4444'
       : '#6b7280';
 
-  const regLabel = escapeHtml(vehicle.regNumber || vehicle.registrationNumber || '—');
-  const pulseStyle = st === 'MOVING' ? 'animation:pulse 2s infinite;' : '';
+  const regLabel = vehicle.regNumber || vehicle.registrationNumber || '—';
 
-  let lastLine = '';
+  let lastLine: ReactNode = null;
   if (vehicle.lastUpdated) {
     const d = new Date(vehicle.lastUpdated);
-    const shown = Number.isNaN(d.getTime())
-      ? escapeHtml(String(vehicle.lastUpdated))
-      : d.toLocaleTimeString('en-IN');
-    lastLine = `<div style="font-size:10px;color:#94a3b8;margin-top:8px;text-align:right;">Updated: ${shown}</div>`;
+    const shown = Number.isNaN(d.getTime()) ? String(vehicle.lastUpdated) : d.toLocaleTimeString('en-IN');
+    lastLine = (
+      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, textAlign: 'right' }}>Updated: {shown}</div>
+    );
   }
 
-  return `
-    <div style="min-width:240px;font-family:system-ui,-apple-system,sans-serif;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};${pulseStyle}"></div>
-        <span style="font-weight:700;font-size:15px;color:#0D2847;">${regLabel}</span>
-        <span style="margin-left:auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:${statusColor}20;color:${statusColor};">${escapeHtml(st)}</span>
+  return (
+    <div style={{ minWidth: 240, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: statusColor,
+            ...(st === 'MOVING' ? { animation: 'pulse 2s infinite' } : {}),
+          }}
+        />
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#0D2847' }}>{regLabel}</span>
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: 11,
+            fontWeight: 600,
+            padding: '2px 8px',
+            borderRadius: 10,
+            background: `${statusColor}20`,
+            color: statusColor,
+          }}
+        >
+          {st}
+        </span>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;text-align:center;">
-          <div style="font-size:10px;color:#64748b;margin-bottom:2px;">Speed</div>
-          <div style="font-size:16px;font-weight:700;color:#0D2847;">${Math.round(Number(vehicle.speed) || 0)}<span style="font-size:10px;font-weight:400;"> km/h</span></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Speed</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0D2847' }}>
+            {Math.round(Number(vehicle.speed) || 0)}
+            <span style={{ fontSize: 10, fontWeight: 400 }}> km/h</span>
+          </div>
         </div>
-        <div style="background:#f0f9ff;border-radius:8px;padding:8px 10px;text-align:center;">
-          <div style="font-size:10px;color:#64748b;margin-bottom:2px;">Temperature</div>
-          <div style="font-size:16px;font-weight:700;color:${tempColor};">${temp}</div>
+        <div style={{ background: '#f0f9ff', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Temperature</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: tempColor }}>{temp}</div>
         </div>
       </div>
 
-      <div style="font-size:12px;color:#475569;line-height:1.6;">
-        ${vehicle.location ? `<div style="display:flex;gap:6px;"><span style="color:#94a3b8;">Location:</span> ${escapeHtml(vehicle.location)}</div>` : ''}
-        ${vehicle.movingSince && st === 'MOVING' ? `<div style="display:flex;gap:6px;"><span style="color:#94a3b8;">Moving:</span> ${escapeHtml(vehicle.movingSince)}</div>` : ''}
-        ${vehicle.haltedSince && (st === 'HALTED' || st === 'LONG_HALT') ? `<div style="display:flex;gap:6px;"><span style="color:#94a3b8;">Halted:</span> ${escapeHtml(vehicle.haltedSince)}</div>` : ''}
-        ${vehicle.noDataSince && st === 'OFFLINE' ? `<div style="display:flex;gap:6px;"><span style="color:#94a3b8;">Offline:</span> ${escapeHtml(vehicle.noDataSince)}</div>` : ''}
+      <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+        {vehicle.location ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span style={{ color: '#94a3b8' }}>Location:</span> {vehicle.location}
+          </div>
+        ) : null}
+        {vehicle.movingSince && st === 'MOVING' ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span style={{ color: '#94a3b8' }}>Moving:</span> {vehicle.movingSince}
+          </div>
+        ) : null}
+        {vehicle.haltedSince && (st === 'HALTED' || st === 'LONG_HALT') ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span style={{ color: '#94a3b8' }}>Halted:</span> {vehicle.haltedSince}
+          </div>
+        ) : null}
+        {vehicle.noDataSince && st === 'OFFLINE' ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span style={{ color: '#94a3b8' }}>Offline:</span> {vehicle.noDataSince}
+          </div>
+        ) : null}
       </div>
 
-      <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
-        ${vehicle.acOn ? '<span style="font-size:10px;background:#ecfeff;color:#0891b2;padding:2px 8px;border-radius:10px;font-weight:600;">AC ON</span>' : ''}
-        ${vehicle.ignitionOn ? '<span style="font-size:10px;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:10px;font-weight:600;">IGN ON</span>' : ''}
-        ${vehicle.doorOpen ? '<span style="font-size:10px;background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:10px;font-weight:600;">DOOR OPEN</span>' : ''}
+      <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+        {vehicle.acOn ? (
+          <span
+            style={{
+              fontSize: 10,
+              background: '#ecfeff',
+              color: '#0891b2',
+              padding: '2px 8px',
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            AC ON
+          </span>
+        ) : null}
+        {vehicle.ignitionOn ? (
+          <span
+            style={{
+              fontSize: 10,
+              background: '#f0fdf4',
+              color: '#16a34a',
+              padding: '2px 8px',
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            IGN ON
+          </span>
+        ) : null}
+        {vehicle.doorOpen ? (
+          <span
+            style={{
+              fontSize: 10,
+              background: '#fef2f2',
+              color: '#dc2626',
+              padding: '2px 8px',
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            DOOR OPEN
+          </span>
+        ) : null}
       </div>
 
-      ${lastLine}
+      {lastLine}
     </div>
-  `;
+  );
+}
+
+/** Leaflet marker: direction arrow + status-colored body + reg label only (no speed/temp/AC). */
+function createLiveVehicleIcon(args: {
+  iconType: GpsVehicle['iconType'];
+  status: GpsVehicle['status'];
+  direction: GpsVehicle['direction'];
+  mapRegLabel: string;
+}): L.DivIcon {
+  return buildCleanMarkerDivIcon({
+    iconType: args.iconType,
+    status: String(args.status || 'UNKNOWN'),
+    direction: args.direction,
+    mapRegLabel: args.mapRegLabel,
+  });
 }
 
 function fixLeafletDefaultIcons() {
@@ -206,7 +276,7 @@ export function GpsLiveMap({
           }}
         >
           <Popup maxWidth={280} className="custom-popup" closeButton autoPan>
-            <div dangerouslySetInnerHTML={{ __html: createPopupContent(v) }} />
+            <GpsVehiclePopupBody vehicle={v} />
           </Popup>
         </Marker>
       ))}

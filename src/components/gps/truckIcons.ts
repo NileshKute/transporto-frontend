@@ -111,7 +111,7 @@ function statusToMarkerColor(status: string | undefined): string {
   return STATUS_MARKER_COLORS[s] ?? STATUS_MARKER_COLORS.OFFLINE;
 }
 
-/** GPS bearing: 0° = north, clockwise — arrow points up at 0° and rotates. */
+/** GPS bearing: 0 = north, clockwise — arrow points up at 0 and rotates with heading. */
 export function directionToRotationDegrees(direction: number | null | undefined): number {
   if (direction == null || Number.isNaN(Number(direction))) return 0;
   return Number(direction);

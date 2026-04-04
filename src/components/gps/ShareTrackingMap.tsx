@@ -11,12 +11,49 @@ const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/
 const TILE_ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+/** Popup only — not used in divIcon marker HTML. */
+function ShareTrackPopupBody({
+  regNumber,
+  speed,
+  temperature,
+  status,
+  location,
+}: {
+  regNumber: string;
+  speed: number;
+  temperature: number | null;
+  status: string;
+  location: string;
+}) {
+  const tempStr =
+    temperature != null && !Number.isNaN(Number(temperature)) ? `${Number(temperature).toFixed(1)}°C` : '—';
+  const tempColor =
+    temperature != null && !Number.isNaN(Number(temperature))
+      ? Number(temperature) < 0
+        ? '#2563eb'
+        : Number(temperature) <= 10
+          ? '#16a34a'
+          : '#dc2626'
+      : '#64748b';
+
+  return (
+    <div style={{ minWidth: 200, fontFamily: 'system-ui, sans-serif', fontSize: 13 }}>
+      <p style={{ fontWeight: 700, color: '#0D2847', margin: '0 0 6px' }}>{regNumber}</p>
+      <p style={{ margin: '4px 0', color: '#475569' }}>
+        Speed: <strong>{Math.round(speed)} km/h</strong>
+      </p>
+      <p style={{ margin: '4px 0', color: '#475569' }}>
+        Temp:{' '}
+        <strong style={{ color: tempColor }}>{tempStr}</strong>
+      </p>
+      <p style={{ margin: '4px 0', color: '#475569' }}>
+        Status: <strong>{status}</strong>
+      </p>
+      {location ? (
+        <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 12 }}>{location}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function fixLeafletDefaultIcons() {
@@ -43,18 +80,6 @@ function createShareMarkerIcon(args: {
     direction: args.direction,
     mapRegLabel: args.regNumber,
   });
-}
-
-function popupHtml(reg: string, speed: number, temp: string, tempColor: string, status: string, location: string) {
-  return `
-    <div style="min-width:200px;font-family:system-ui,sans-serif;font-size:13px;">
-      <p style="font-weight:700;color:#0D2847;margin:0 0 6px;">${escapeHtml(reg)}</p>
-      <p style="margin:4px 0;color:#475569;">Speed: <strong>${Math.round(speed)} km/h</strong></p>
-      <p style="margin:4px 0;color:#475569;">Temp: <strong style="color:${tempColor}">${escapeHtml(temp)}</strong></p>
-      <p style="margin:4px 0;color:#475569;">Status: <strong>${escapeHtml(status)}</strong></p>
-      ${location ? `<p style="margin:6px 0 0;color:#64748b;font-size:12px;">${escapeHtml(location)}</p>` : ''}
-    </div>
-  `;
 }
 
 function MapViewController({
@@ -135,19 +160,6 @@ export function ShareTrackingMap({
     [status, iconType, direction, regNumber]
   );
 
-  const tempStr =
-    temperature != null && !Number.isNaN(Number(temperature)) ? `${Number(temperature).toFixed(1)}°C` : '—';
-  const tempColor =
-    temperature != null && !Number.isNaN(Number(temperature))
-      ? Number(temperature) < 0
-        ? '#2563eb'
-        : Number(temperature) <= 10
-          ? '#16a34a'
-          : '#dc2626'
-      : '#64748b';
-
-  const popup = popupHtml(regNumber, speed, tempStr, tempColor, status || '—', location);
-
   return (
     <MapContainer
       center={DEFAULT_CENTER}
@@ -162,7 +174,13 @@ export function ShareTrackingMap({
       {hasPosition && (
         <Marker position={[latitude!, longitude!]} icon={icon}>
           <Popup className="custom-popup" closeButton autoPan>
-            <div dangerouslySetInnerHTML={{ __html: popup }} />
+            <ShareTrackPopupBody
+              regNumber={regNumber}
+              speed={speed}
+              temperature={temperature}
+              status={status || '—'}
+              location={location}
+            />
           </Popup>
         </Marker>
       )}
