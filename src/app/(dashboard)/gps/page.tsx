@@ -125,10 +125,6 @@ export default function GpsLivePage() {
   }, [refreshInterval, fetchLiveData]);
 
   useEffect(() => {
-    api.get('/gps/sync').catch(() => {});
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {

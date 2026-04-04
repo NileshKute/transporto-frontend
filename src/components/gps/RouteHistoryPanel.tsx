@@ -71,6 +71,17 @@ function formatClock(iso: string | undefined): string {
   }).format(new Date(ms));
 }
 
+/** GET /gps/route may return a bare array or { points, totalPoints } or { data }. */
+function extractRoutePointsFromResponse(raw: unknown): GpsRoutePoint[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object') {
+    const o = raw as { points?: unknown; data?: unknown };
+    if (Array.isArray(o.points)) return o.points as GpsRoutePoint[];
+    if (Array.isArray(o.data)) return o.data as GpsRoutePoint[];
+  }
+  return [];
+}
+
 export function RouteHistoryPanel({
   fleetVehicles,
   mapTheme,
@@ -136,11 +147,11 @@ export function RouteHistoryPanel({
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await api.get<GpsRoutePoint[] | { data?: GpsRoutePoint[] }>('/gps/route', {
+      const res = await api.get('/gps/route', {
         params: { vehicleId, startDate: date, endDate: date },
       });
       const raw = res.data;
-      const arr = Array.isArray(raw) ? raw : Array.isArray((raw as { data?: GpsRoutePoint[] }).data) ? (raw as { data: GpsRoutePoint[] }).data : [];
+      const arr = extractRoutePointsFromResponse(raw);
       const next = sortRoutePoints(arr) as (GpsRoutePoint & { latitude: number; longitude: number })[];
       setPoints(next);
       setIndex(0);
