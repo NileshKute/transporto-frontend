@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { StatCard } from '@/components/ui/StatCard';
@@ -8,19 +8,22 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatBpclDate, formatInrTwoDecimals, formatNumber } from '@/lib/utils';
-import { Fuel, IndianRupee, Gauge, ListOrdered, Search, Download } from 'lucide-react';
+import { Fuel, IndianRupee, Gauge, ListOrdered, Search, Download, ChevronDown, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LIMIT = 50;
 
+/** Local calendar: first day of current month → today (YYYY-MM-DD). */
 function defaultDateRange() {
   const end = new Date();
-  const start = new Date();
-  start.setFullYear(start.getFullYear() - 1);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+  const start = new Date(end.getFullYear(), end.getMonth(), 1);
+  const fmt = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
+  return { start: fmt(start), end: fmt(end) };
 }
 
 interface TxRow {
@@ -132,11 +135,123 @@ function parseBpclTransactionsPayload(resData: any) {
 const inputClass =
   'h-10 rounded-lg border border-[#E0E8F0] text-sm text-[#0D2847] px-3 font-["Rajdhani"] focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/20';
 
+function VehicleMultiSelect({
+  options,
+  selected,
+  onChange,
+  id,
+}: {
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  id?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: Event) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const allMode = selected.length === 0;
+
+  const toggle = (v: string) => {
+    if (selected.includes(v)) onChange(selected.filter((x) => x !== v));
+    else onChange([...selected, v]);
+  };
+
+  const remove = (v: string, e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    onChange(selected.filter((x) => x !== v));
+  };
+
+  return (
+    <div className="relative flex-1 min-w-[200px]" ref={rootRef}>
+      <label
+        htmlFor={id}
+        className="block font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1"
+      >
+        Vehicle number
+      </label>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`${inputClass} w-full min-h-[40px] h-auto py-1.5 text-left inline-flex flex-wrap gap-1.5 items-center justify-between`}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <span className="flex flex-wrap gap-1.5 items-center flex-1 min-w-0">
+          {allMode ? (
+            <span className="text-[#7A9AB8] text-sm">All vehicles</span>
+          ) : (
+            selected.map((v) => (
+              <span
+                key={v}
+                className="inline-flex items-center gap-0.5 pl-2 pr-1 py-0.5 rounded-md bg-[#E3F2FD] text-[#1565C0] text-xs font-mono max-w-full"
+              >
+                <span className="truncate">{v}</span>
+                <button
+                  type="button"
+                  className="p-0.5 rounded hover:bg-[#BBDEFB] shrink-0"
+                  aria-label={`Remove ${v}`}
+                  onClick={(e) => remove(v, e)}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            ))
+          )}
+        </span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-[#7A9AB8] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          className="absolute z-[100] mt-1 left-0 right-0 max-h-64 overflow-y-auto rounded-lg border border-[#E0E8F0] bg-white shadow-lg py-1"
+          role="listbox"
+        >
+          <label className="flex items-center gap-2 px-3 py-2 hover:bg-[#F4F6F8] cursor-pointer border-b border-[#E0E8F0]">
+            <input
+              type="checkbox"
+              className="rounded border-[#E0E8F0]"
+              checked={allMode}
+              onChange={() => onChange([])}
+            />
+            <span className="text-sm font-['Rajdhani'] text-[#0D2847] font-medium">All vehicles</span>
+          </label>
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-[#7A9AB8]">No vehicles in list yet</div>
+          ) : (
+            options.map((v) => (
+              <label
+                key={v}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-[#F4F6F8] cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  className="rounded border-[#E0E8F0]"
+                  checked={selected.includes(v)}
+                  onChange={() => toggle(v)}
+                />
+                <span className="text-sm font-mono text-[#0D2847]">{v}</span>
+              </label>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BpclTransactionsPage() {
   const dr = defaultDateRange();
   const [draft, setDraft] = useState({
     tag: '',
-    vehicleNumber: '',
+    vehicleNumbers: [] as string[],
     cardNumber: '',
     startDate: dr.start,
     endDate: dr.end,
@@ -145,6 +260,15 @@ export default function BpclTransactionsPage() {
   const [applied, setApplied] = useState(draft);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+
+  const { data: vehiclesRaw } = useQuery({
+    queryKey: ['bpcl-page-vehicles'],
+    queryFn: async () => {
+      const res = await api.get('/vehicles', { params: { limit: 500, page: 1 } });
+      const raw = res.data?.data ?? res.data;
+      return Array.isArray(raw) ? raw : [];
+    },
+  });
 
   const { data: cardsRaw } = useQuery({
     queryKey: ['bpcl-cards-options'],
@@ -167,7 +291,7 @@ export default function BpclTransactionsPage() {
   const txParams = useMemo(() => {
     const p: Record<string, string | number> = { page, limit: LIMIT };
     if (applied.tag) p.tag = applied.tag;
-    if (applied.vehicleNumber.trim()) p.vehicleNumber = applied.vehicleNumber.trim();
+    if (applied.vehicleNumbers.length > 0) p.vehicleNumber = applied.vehicleNumbers.join(',');
     if (applied.cardNumber) p.cardNumber = applied.cardNumber;
     if (applied.startDate) p.startDate = applied.startDate;
     if (applied.endDate) p.endDate = applied.endDate;
@@ -192,6 +316,19 @@ export default function BpclTransactionsPage() {
       };
     },
   });
+
+  const vehicleOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of vehiclesRaw ?? []) {
+      const r = (row as Record<string, unknown>).regNumber ?? (row as Record<string, unknown>).registrationNumber;
+      if (r != null && String(r).trim()) set.add(String(r).trim());
+    }
+    for (const t of txRes?.rows ?? []) {
+      const v = String(t.vehicle ?? '').trim();
+      if (v && v !== '—') set.add(v);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }));
+  }, [vehiclesRaw, txRes?.rows]);
 
   const rows = useMemo(() => {
     const list = txRes?.rows ?? [];
@@ -293,15 +430,12 @@ export default function BpclTransactionsPage() {
             <option value="IGNORE">Ignore</option>
           </select>
         </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="block font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Vehicle number</label>
-          <input
-            className={`${inputClass} w-full min-w-[140px]`}
-            placeholder="e.g. MH46BM7711"
-            value={draft.vehicleNumber}
-            onChange={(e) => setDraft((d) => ({ ...d, vehicleNumber: e.target.value }))}
-          />
-        </div>
+        <VehicleMultiSelect
+          id="bpcl-vehicle-multiselect"
+          options={vehicleOptions}
+          selected={draft.vehicleNumbers}
+          onChange={(vehicleNumbers) => setDraft((d) => ({ ...d, vehicleNumbers }))}
+        />
         <div>
           <label className="block font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-wider text-[#1A4A7A] mb-1">Card</label>
           <select
