@@ -204,7 +204,7 @@ export default function GpsLivePage() {
         throw new Error('no id');
       }
       try {
-        await api.patch(`/vehicles/${id}`, { iconType });
+        await api.put(`/vehicles/${id}`, { iconType });
         setFleetRows((rows) => rows.map((r) => (r.id === id ? { ...r, iconType } : r)));
         setSelectedVehicle((s) => (s ? { ...s, id, iconType } : s));
         toast.success('Icon updated');

@@ -1,4 +1,4 @@
-/** Single GPS ping from /api/gps/route or /api/gps/history */
+/** Single GPS ping from GET /api/gps/route (startDate+endDate) or /api/gps/history (same date params for ranges). */
 
 export interface GpsRoutePoint {
   id?: string;

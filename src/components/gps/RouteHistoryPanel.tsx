@@ -137,7 +137,7 @@ export function RouteHistoryPanel({
     setLoadError(null);
     try {
       const res = await api.get<GpsRoutePoint[] | { data?: GpsRoutePoint[] }>('/gps/route', {
-        params: { vehicleId, date },
+        params: { vehicleId, startDate: date, endDate: date },
       });
       const raw = res.data;
       const arr = Array.isArray(raw) ? raw : Array.isArray((raw as { data?: GpsRoutePoint[] }).data) ? (raw as { data: GpsRoutePoint[] }).data : [];
