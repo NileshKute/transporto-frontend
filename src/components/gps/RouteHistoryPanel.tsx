@@ -2,6 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { FileText, Loader2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -95,6 +97,8 @@ export function RouteHistoryPanel({
   const [playing, setPlaying] = useState(false);
   const [speedMult, setSpeedMult] = useState(1);
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [reportClientName, setReportClientName] = useState('');
 
   const sorted = points;
   const halts = useMemo(() => detectHaltEvents(sorted), [sorted]);
@@ -163,6 +167,38 @@ export function RouteHistoryPanel({
     }
   }, [vehicleId, date]);
 
+  const downloadReport = useCallback(async () => {
+    if (!vehicleId || !date || sorted.length === 0) return;
+    setDownloadingReport(true);
+    try {
+      const response = await api.get('/gps/route-report', {
+        params: {
+          vehicleId,
+          date,
+          ...(reportClientName.trim() ? { clientName: reportClientName.trim() } : {}),
+        },
+        responseType: 'blob',
+      });
+      const blob =
+        response.data instanceof Blob ? response.data : new Blob([response.data as BlobPart]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const regLabel = selectedFleet ? regOf(selectedFleet) : vehicleId;
+      const regSafe = regLabel.replace(/[^\w\u0900-\u0C7F.-]+/g, '_').slice(0, 48) || 'vehicle';
+      link.href = url;
+      link.setAttribute('download', `Route_Report_${regSafe}_${date}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Report downloaded!');
+    } catch {
+      toast.error('Failed to generate report');
+    } finally {
+      setDownloadingReport(false);
+    }
+  }, [vehicleId, date, sorted.length, reportClientName, selectedFleet]);
+
   const current = sorted[Math.min(Math.max(0, index), Math.max(0, sorted.length - 1))];
   const firstMs = sorted[0] ? pointTimeMs(sorted[0]) : 0;
   const lastMs = sorted.length ? pointTimeMs(sorted[sorted.length - 1]) : 0;
@@ -226,10 +262,46 @@ export function RouteHistoryPanel({
           type="button"
           onClick={() => void loadRoute()}
           disabled={loading}
-          className="px-5 py-2.5 rounded-lg bg-[#1565C0] text-white text-sm font-['Barlow_Condensed'] uppercase tracking-wider hover:bg-[#0D2847] disabled:opacity-60 shrink-0"
+          className="px-5 py-2.5 rounded-lg bg-[#1565C0] text-white text-sm font-['Barlow_Condensed'] uppercase tracking-wider hover:bg-[#0D2847] disabled:opacity-60 shrink-0 h-[42px] box-border"
         >
           {loading ? 'Loading…' : 'Load route'}
         </button>
+        {sorted.length > 0 && (
+          <>
+            <div className="w-full sm:w-auto sm:min-w-[180px] lg:min-w-[200px]">
+              <label className="block text-xs font-['Barlow_Condensed'] uppercase tracking-wide text-gray-500 mb-1">
+                Client name (for report)
+              </label>
+              <input
+                type="text"
+                value={reportClientName}
+                onChange={(e) => setReportClientName(e.target.value)}
+                placeholder="Optional"
+                className="text-sm w-full min-h-[42px] px-3 py-2 rounded-lg border border-gray-200 bg-white"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => void downloadReport()}
+                disabled={downloadingReport || !vehicleId}
+                className="px-5 py-2.5 rounded-lg bg-white text-[#1565C0] border-2 border-[#1565C0] text-sm font-['Barlow_Condensed'] uppercase tracking-wider hover:bg-blue-50 disabled:opacity-60 shrink-0 h-[42px] box-border inline-flex items-center justify-center gap-2"
+              >
+                {downloadingReport ? (
+                  <>
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 shrink-0" aria-hidden />
+                    Download report
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {loadError && (
