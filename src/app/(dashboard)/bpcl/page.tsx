@@ -13,17 +13,19 @@ import toast from 'react-hot-toast';
 
 const LIMIT = 50;
 
-/** Local calendar: first day of current month → today (YYYY-MM-DD). */
+/** Local calendar: first day of month, six months ago → today (YYYY-MM-DD). */
 function defaultDateRange() {
   const end = new Date();
-  const start = new Date(end.getFullYear(), end.getMonth(), 1);
+  const from = new Date();
+  from.setMonth(from.getMonth() - 6);
+  from.setDate(1);
   const fmt = (d: Date) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-  return { start: fmt(start), end: fmt(end) };
+  return { start: fmt(from), end: fmt(end) };
 }
 
 interface TxRow {
