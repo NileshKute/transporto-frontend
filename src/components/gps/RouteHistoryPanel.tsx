@@ -45,12 +45,6 @@ export interface RouteFleetVehicle {
   iconType?: string;
 }
 
-function yesterdayISO(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -90,7 +84,10 @@ export function RouteHistoryPanel({
   mapTheme: MapThemeKey;
 }) {
   const [vehicleId, setVehicleId] = useState('');
-  const [date, setDate] = useState(yesterdayISO);
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [points, setPoints] = useState<(GpsRoutePoint & { latitude: number; longitude: number })[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
