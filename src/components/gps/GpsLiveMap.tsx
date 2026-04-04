@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { vehicleReg as reg, type GpsVehicle } from './types';
 import { mapThemes, type MapThemeKey } from './mapThemes';
-import { buildTruckMarkerDivIcon } from './truckIcons';
+import { buildCleanMarkerDivIcon } from './truckIcons';
 
 function escapeHtml(s: string): string {
   return s
@@ -16,47 +16,18 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function statusPulseColor(status: string): string {
-  switch (status) {
-    case 'MOVING':
-      return '#22c55e';
-    case 'HALTED':
-      return '#ef4444';
-    case 'LONG_HALT':
-      return '#f97316';
-    case 'IDLE':
-      return '#eab308';
-    case 'OFFLINE':
-      return '#94a3b8';
-    default:
-      return '#94a3b8';
-  }
-}
-
-function createLiveVehicleIcon(v: GpsVehicle): L.DivIcon {
-  const status = String(v.status || 'UNKNOWN');
-  const t = v.temperature != null ? Number(v.temperature) : NaN;
-  const spd = v.speed != null ? Number(v.speed) : NaN;
-  const pulse = statusPulseColor(status);
-  const showTemp = v.temperature != null && !Number.isNaN(t) && t !== 0;
-  const tempBadge = showTemp
-    ? `<div style="position:absolute;top:1px;right:4px;z-index:4;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:6px;white-space:nowrap;border:1px solid #fff;line-height:1.15;">${t.toFixed(0)}°</div>`
-    : '';
-  const speedBadge =
-    status === 'MOVING' && !Number.isNaN(spd) && spd > 0
-      ? `<div style="position:absolute;bottom:17px;right:5px;z-index:4;background:#0D2847;color:#fff;font-size:9px;font-weight:700;padding:1px 3px;border-radius:5px;white-space:nowrap;border:1px solid #fff;line-height:1.15;">${Math.round(spd)}</div>`
-      : '';
-  const pulseRing =
-    status === 'MOVING'
-      ? `<div style="position:absolute;left:50%;top:22px;width:50px;height:50px;margin-left:-25px;margin-top:-25px;border-radius:50%;background:${pulse}33;animation:pulse 2s infinite;pointer-events:none;z-index:0;"></div>`
-      : '';
-
-  return buildTruckMarkerDivIcon({
-    iconType: v.iconType,
-    status,
-    direction: v.direction,
-    mapRegLabel: reg(v),
-    badges: { tempHtml: tempBadge, speedHtml: speedBadge, pulseRingHtml: pulseRing },
+/** Leaflet marker: direction arrow + status-colored body + reg label only (no speed/temp/AC). */
+function createLiveVehicleIcon(args: {
+  iconType: GpsVehicle['iconType'];
+  status: GpsVehicle['status'];
+  direction: GpsVehicle['direction'];
+  mapRegLabel: string;
+}): L.DivIcon {
+  return buildCleanMarkerDivIcon({
+    iconType: args.iconType,
+    status: String(args.status || 'UNKNOWN'),
+    direction: args.direction,
+    mapRegLabel: args.mapRegLabel,
   });
 }
 
@@ -222,9 +193,14 @@ export function GpsLiveMap({
       <MapViewSync vehicles={vehicles} selectedReg={selectedReg} />
       {mappable.map((v) => (
         <Marker
-          key={`${reg(v)}-${v.iconType ?? ''}-${v.direction ?? ''}-${String(v.status)}-${v.temperature ?? ''}-${v.speed ?? ''}`}
+          key={`${reg(v)}-${v.iconType ?? ''}-${v.direction ?? ''}-${String(v.status)}`}
           position={[v.latitude as number, v.longitude as number]}
-          icon={createLiveVehicleIcon(v)}
+          icon={createLiveVehicleIcon({
+            iconType: v.iconType,
+            status: v.status,
+            direction: v.direction,
+            mapRegLabel: reg(v),
+          })}
           eventHandlers={{
             click: () => onMarkerClick(v),
           }}

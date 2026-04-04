@@ -67,7 +67,7 @@ export function VehicleIconPickerModal({
           <p className="text-xs text-gray-500 font-['Barlow_Condensed'] uppercase tracking-wide mb-3">
             Choose shape — map color follows status (moving / halted / etc.)
           </p>
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {TRUCK_ICON_TYPES.map((t) => {
               const sel = pending === t;
               return (
@@ -76,15 +76,15 @@ export function VehicleIconPickerModal({
                   type="button"
                   onClick={() => setPending(t)}
                   title={TRUCK_ICON_LABELS[t]}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all hover:bg-slate-50 ${
-                    sel ? 'border-[#1565C0] bg-blue-50/60 ring-2 ring-[#1565C0]/20' : 'border-gray-100'
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all hover:bg-slate-50 ${
+                    sel ? 'border-[#1565C0] bg-blue-50/70 ring-2 ring-[#1565C0]/35' : 'border-gray-100'
                   }`}
                 >
                   <span
-                    className="flex items-center justify-center w-11 h-11"
-                    dangerouslySetInnerHTML={{ __html: pickerPreviewSvg(t, 40) }}
+                    className="flex items-center justify-center"
+                    dangerouslySetInnerHTML={{ __html: pickerPreviewSvg(t, 44) }}
                   />
-                  <span className="text-[9px] text-gray-600 leading-tight text-center line-clamp-2">
+                  <span className="text-[10px] font-['Barlow_Condensed'] font-semibold text-gray-700 leading-tight text-center line-clamp-2">
                     {TRUCK_ICON_LABELS[t]}
                   </span>
                 </button>
@@ -94,11 +94,14 @@ export function VehicleIconPickerModal({
 
           <div className="mt-5 pt-4 border-t border-gray-100">
             <p className="text-xs font-['Barlow_Condensed'] uppercase tracking-wide text-gray-500 mb-2">Selected</p>
-            <div className="flex items-center justify-center rounded-xl bg-slate-100 py-6 border border-gray-200">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-slate-100 py-7 px-4 border border-gray-200 gap-3">
               <span
-                className="flex items-center justify-center w-[88px] h-[88px]"
-                dangerouslySetInnerHTML={{ __html: pickerPreviewSvg(pending, 80) }}
+                className="flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: pickerPreviewSvg(pending, 88) }}
               />
+              <p className="text-sm font-['Barlow_Condensed'] font-bold text-[#0D2847] tracking-wide">
+                {TRUCK_ICON_LABELS[pending]}
+              </p>
             </div>
           </div>
         </div>

@@ -155,45 +155,69 @@ button, a, input, select, [role="button"] {
   border: none !important;
 }
 
-/* GPS — Leaflet truck SVG markers (live + route playback) */
-.truck-marker {
+/* GPS — clean Leaflet markers (live, share, route playback) */
+.gps-clean-marker-icon {
   background: transparent !important;
   border: none !important;
 }
-.truck-marker-wrapper {
-  position: relative;
+
+.clean-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
 }
-.truck-marker .truck-marker-rot,
-.truck-marker-wrapper .truck-marker-rot {
+
+.marker-arrow {
+  margin-bottom: -2px;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
   transition: transform 0.5s ease;
+  transform-origin: 50% 100%;
 }
-.truck-label {
-  position: absolute;
-  bottom: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.9);
+
+.marker-body {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.marker-label {
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.92);
   color: #1a1a1a;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   font-family: 'Barlow Condensed', sans-serif;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: 10px;
   white-space: nowrap;
-  text-shadow: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   letter-spacing: 0.3px;
   pointer-events: none;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.truck-marker svg {
-  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.3));
-}
-.truck-marker.moving svg {
-  animation: truckIconScalePulse 2s ease-in-out infinite;
-}
-@keyframes truckIconScalePulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+
+.clean-picker-swatch {
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .route-end-marker,

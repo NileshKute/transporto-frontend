@@ -14,7 +14,7 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mapThemes, type MapThemeKey } from './mapThemes';
-import { buildTruckMarkerDivIcon } from './truckIcons';
+import { buildCleanMarkerDivIcon } from './truckIcons';
 import {
   buildSpeedColoredSegments,
   type GpsRoutePoint,
@@ -107,11 +107,10 @@ export function RouteHistoryMap({
   const current = points[Math.min(Math.max(0, currentIndex), Math.max(0, points.length - 1))];
   const playbackIcon = useMemo(() => {
     if (!current) return null;
-    return buildTruckMarkerDivIcon({
+    return buildCleanMarkerDivIcon({
       iconType: vehicleIconType,
       status: String(current.status || 'MOVING'),
       direction: current.direction,
-      badges: {},
     });
   }, [current, vehicleIconType]);
 
