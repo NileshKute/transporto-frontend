@@ -73,12 +73,13 @@ const adminNavGroup = {
   ],
 };
 
-function getPageTitle(pathname: string) {
-  if (pathname.startsWith('/clients')) return pathname === '/clients' ? 'Clients' : 'Client';
-  if (pathname.startsWith('/invoices')) {
-    if (pathname === '/invoices') return 'Invoices';
-    if (pathname === '/invoices/create') return 'Create Invoice';
-    if (pathname.endsWith('/edit')) return 'Edit Invoice';
+function getPageTitle(pathname: string | null) {
+  const p = pathname ?? '';
+  if (p.startsWith('/clients')) return p === '/clients' ? 'Clients' : 'Client';
+  if (p.startsWith('/invoices')) {
+    if (p === '/invoices') return 'Invoices';
+    if (p === '/invoices/create') return 'Create Invoice';
+    if (p.endsWith('/edit')) return 'Edit Invoice';
     return 'Invoice';
   }
   const map: Record<string, string> = {
@@ -101,7 +102,100 @@ function getPageTitle(pathname: string) {
     '/salary': 'Salary',
     '/admin/permissions': 'Permissions',
   };
-  return map[pathname] || 'Dashboard';
+  return map[p] || 'Dashboard';
+}
+
+/** Breadcrumb builder — pathname coerced; labels are always plain strings for React children. */
+function buildBreadcrumbItems(pathname: string | null, pageTitle: string): BreadcrumbItem[] {
+  const p = pathname ?? '';
+  const items: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard' }];
+  if (p === '/dashboard') return items;
+  if (p.startsWith('/clients')) {
+    items.push({ label: 'Clients', href: '/clients' });
+    if (p !== '/clients') items.push({ label: p.includes('/edit') ? 'Edit' : 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/invoices')) {
+    items.push({ label: 'Invoices', href: '/invoices' });
+    if (p === '/invoices/create') items.push({ label: 'Create' });
+    else if (p.endsWith('/edit')) items.push({ label: 'Edit' });
+    else if (p !== '/invoices') items.push({ label: 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/vehicles')) {
+    items.push({ label: 'Vehicles', href: '/vehicles' });
+    if (p !== '/vehicles') items.push({ label: 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/gps')) {
+    items.push({ label: 'GPS Live Tracking', href: '/gps' });
+    return items;
+  }
+  if (p.startsWith('/drivers')) {
+    items.push({ label: 'Drivers', href: '/drivers' });
+    if (p !== '/drivers') items.push({ label: 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/trips')) {
+    items.push({ label: 'Trips', href: '/trips' });
+    return items;
+  }
+  if (p.startsWith('/fuel')) {
+    items.push({ label: 'Fuel', href: '/fuel' });
+    return items;
+  }
+  if (p.startsWith('/bpcl')) {
+    if (p === '/bpcl') {
+      items.push({ label: 'BPCL Transactions', href: '/bpcl' });
+      return items;
+    }
+    items.push({ label: 'BPCL', href: '/bpcl' });
+    if (p === '/bpcl/import') items.push({ label: 'Import BPCL Data' });
+    else if (p === '/bpcl/cards') items.push({ label: 'Card Management' });
+    return items;
+  }
+  if (p.startsWith('/maintenance')) {
+    items.push({ label: 'Maintenance', href: '/maintenance' });
+    return items;
+  }
+  if (p.startsWith('/emergencies')) {
+    items.push({ label: 'Emergencies', href: '/emergencies' });
+    return items;
+  }
+  if (p.startsWith('/insurance')) {
+    items.push({ label: 'Insurance', href: '/insurance' });
+    return items;
+  }
+  if (p.startsWith('/cold-storage')) {
+    items.push({ label: 'Cold Storage', href: '/cold-storage' });
+    return items;
+  }
+  if (p.startsWith('/shifts')) {
+    items.push({ label: 'Shifts', href: '/shifts' });
+    return items;
+  }
+  if (p.startsWith('/whatsapp')) {
+    items.push({ label: 'WhatsApp', href: '/whatsapp' });
+    return items;
+  }
+  if (p.startsWith('/driver-ledger')) {
+    items.push({ label: 'Driver Ledger', href: '/driver-ledger' });
+    return items;
+  }
+  if (p.startsWith('/salary')) {
+    items.push({ label: 'Salary', href: '/salary' });
+    return items;
+  }
+  if (p.startsWith('/admin/permissions')) {
+    items.push({ label: 'Permissions', href: '/admin/permissions' });
+    return items;
+  }
+  if (p.startsWith('/admin/maintenance-types')) {
+    items.push({ label: 'Maintenance Types', href: '/admin/maintenance-types' });
+    return items;
+  }
+  items.push({ label: pageTitle });
+  return items;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -114,6 +208,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
   }, [isLoading, isAuthenticated, router]);
+
+  const pageTitle = useMemo(() => getPageTitle(pathname), [pathname]);
+
+  const breadcrumbItems = useMemo(
+    () => buildBreadcrumbItems(pathname, pageTitle),
+    [pathname, pageTitle]
+  );
+
+  const userDisplayName = useMemo(() => {
+    const n = safe(user?.name);
+    return n === '—' ? 'User' : n;
+  }, [user?.name]);
+
+  const userInitials = useMemo(() => {
+    const n = safe(user?.name);
+    if (!n || n === '—') return 'U';
+    return n
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((c) => c[0])
+      .join('')
+      .slice(0, 2) || 'U';
+  }, [user?.name]);
+
+  const userDisplayRole = useMemo(() => {
+    if (typeof user?.role === 'string') return user.role.replace(/_/g, ' ');
+    const r = safe(user?.role);
+    return r === '—' ? 'Role' : r;
+  }, [user?.role]);
 
   if (isLoading) {
     return (
@@ -129,86 +252,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!isAuthenticated) return null;
-
-  const pageTitle = getPageTitle(pathname);
-
-  const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
-    const items: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard' }];
-    if (pathname === '/dashboard') return items;
-    if (pathname.startsWith('/clients')) {
-      items.push({ label: 'Clients', href: '/clients' });
-      if (pathname !== '/clients') items.push({ label: pathname.includes('/edit') ? 'Edit' : 'Detail' });
-      return items;
-    }
-    if (pathname.startsWith('/invoices')) {
-      items.push({ label: 'Invoices', href: '/invoices' });
-      if (pathname === '/invoices/create') items.push({ label: 'Create' });
-      else if (pathname.endsWith('/edit')) items.push({ label: 'Edit' });
-      else if (pathname !== '/invoices') items.push({ label: 'Detail' });
-      return items;
-    }
-    if (pathname.startsWith('/vehicles')) {
-      items.push({ label: 'Vehicles', href: '/vehicles' });
-      if (pathname !== '/vehicles') items.push({ label: 'Detail' });
-      return items;
-    }
-    if (pathname.startsWith('/gps')) {
-      items.push({ label: 'GPS Live Tracking', href: '/gps' });
-      return items;
-    }
-    if (pathname.startsWith('/drivers')) {
-      items.push({ label: 'Drivers', href: '/drivers' });
-      if (pathname !== '/drivers') items.push({ label: 'Detail' });
-      return items;
-    }
-    if (pathname.startsWith('/trips')) { items.push({ label: 'Trips', href: '/trips' }); return items; }
-    if (pathname.startsWith('/fuel')) { items.push({ label: 'Fuel', href: '/fuel' }); return items; }
-    if (pathname.startsWith('/bpcl')) {
-      if (pathname === '/bpcl') {
-        items.push({ label: 'BPCL Transactions', href: '/bpcl' });
-        return items;
-      }
-      items.push({ label: 'BPCL', href: '/bpcl' });
-      if (pathname === '/bpcl/import') items.push({ label: 'Import BPCL Data' });
-      else if (pathname === '/bpcl/cards') items.push({ label: 'Card Management' });
-      return items;
-    }
-    if (pathname.startsWith('/maintenance')) { items.push({ label: 'Maintenance', href: '/maintenance' }); return items; }
-    if (pathname.startsWith('/emergencies')) { items.push({ label: 'Emergencies', href: '/emergencies' }); return items; }
-    if (pathname.startsWith('/insurance')) { items.push({ label: 'Insurance', href: '/insurance' }); return items; }
-    if (pathname.startsWith('/cold-storage')) { items.push({ label: 'Cold Storage', href: '/cold-storage' }); return items; }
-    if (pathname.startsWith('/shifts')) { items.push({ label: 'Shifts', href: '/shifts' }); return items; }
-    if (pathname.startsWith('/whatsapp')) { items.push({ label: 'WhatsApp', href: '/whatsapp' }); return items; }
-    if (pathname.startsWith('/driver-ledger')) { items.push({ label: 'Driver Ledger', href: '/driver-ledger' }); return items; }
-    if (pathname.startsWith('/salary')) { items.push({ label: 'Salary', href: '/salary' }); return items; }
-    if (pathname.startsWith('/admin/permissions')) {
-      items.push({ label: 'Permissions', href: '/admin/permissions' });
-      return items;
-    }
-    if (pathname.startsWith('/admin/maintenance-types')) {
-      items.push({ label: 'Maintenance Types', href: '/admin/maintenance-types' });
-      return items;
-    }
-    items.push({ label: pageTitle });
-    return items;
-  }, [pathname, pageTitle]);
-
-  const userDisplayName = useMemo(() => {
-    const n = safe(user?.name);
-    return n === '—' ? 'User' : n;
-  }, [user?.name]);
-
-  const userInitials = useMemo(() => {
-    const n = safe(user?.name);
-    if (!n || n === '—') return 'U';
-    return n.split(/\s+/).filter(Boolean).map((c) => c[0]).join('').slice(0, 2) || 'U';
-  }, [user?.name]);
-
-  const userDisplayRole = useMemo(() => {
-    if (typeof user?.role === 'string') return user.role.replace(/_/g, ' ');
-    const r = safe(user?.role);
-    return r === '—' ? 'Role' : r;
-  }, [user?.role]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F4F6F8]">
@@ -247,7 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{group.label}</p>
               <div className="space-y-1">
                 {group.items.map(item => {
-                  const isActive = pathname === item.href;
+                  const isActive = (pathname ?? '') === item.href;
                   return (
                     <Link
                       key={item.href}
@@ -260,7 +303,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       }`}
                     >
                       <item.icon size={18} className="text-[#42A5F5] flex-shrink-0" />
-                      <span>{item.label}</span>
+                      <span>{String(item.label)}</span>
                     </Link>
                   );
                 })}
@@ -272,7 +315,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{adminNavGroup.label}</p>
               <div className="space-y-1">
                 {adminNavGroup.items.map(item => {
-                  const isActive = pathname === item.href;
+                  const isActive = (pathname ?? '') === item.href;
                   return (
                     <Link
                       key={item.href}
@@ -285,7 +328,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       }`}
                     >
                       <item.icon size={18} className="text-[#42A5F5] flex-shrink-0" />
-                      <span>{item.label}</span>
+                      <span>{String(item.label)}</span>
                     </Link>
                   );
                 })}

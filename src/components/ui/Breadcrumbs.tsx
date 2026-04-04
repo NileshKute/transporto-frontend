@@ -14,10 +14,12 @@ export function Breadcrumbs({ items, variant = 'light' }: { items: BreadcrumbIte
           {i > 0 && <span className={isDark ? 'text-[#42A5F5]/70' : 'text-[#E0E8F0]'}>/</span>}
           {item.href ? (
             <Link href={item.href} className={isDark ? 'text-[#64B5F6] hover:text-white hover:underline' : 'text-[#42A5F5] hover:text-[#1565C0] hover:underline'}>
-              {item.label}
+              {typeof item.label === 'string' ? item.label : String(item.label ?? '')}
             </Link>
           ) : (
-            <span className={isDark ? 'text-white font-medium' : 'text-[#0D2847] font-medium'}>{item.label}</span>
+            <span className={isDark ? 'text-white font-medium' : 'text-[#0D2847] font-medium'}>
+              {typeof item.label === 'string' ? item.label : String(item.label ?? '')}
+            </span>
           )}
         </span>
       ))}
