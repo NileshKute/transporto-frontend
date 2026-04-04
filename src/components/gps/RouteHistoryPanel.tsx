@@ -480,7 +480,10 @@ export function RouteHistoryPanel({
           <details className="bg-white rounded-xl border border-gray-100 shadow-sm group">
             <summary className="px-4 py-3 cursor-pointer font-['Barlow_Condensed'] uppercase tracking-wide text-sm text-[#0D2847] list-none flex items-center justify-between">
               Halt points ({halts.length})
-              <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+              <span className="text-gray-400 text-xs">
+                <span className="group-open:hidden">▼</span>
+                <span className="hidden group-open:inline">▲</span>
+              </span>
             </summary>
             <ul className="border-t border-gray-100 max-h-56 overflow-y-auto">
               {halts.length === 0 ? (
