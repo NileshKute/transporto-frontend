@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatBpclDate, formatInrTwoDecimals, formatNumber } from '@/lib/utils';
+import { formatDate, formatNumber } from '@/lib/utils';
 import { Upload, FileSpreadsheet, CheckCircle2, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,8 +39,9 @@ interface ImportHistoryBatch {
   count: number;
   txnMin?: string;
   txnMax?: string;
-  totalAmount: number;
-  totalLitres: number;
+  /** Undefined when API omitted / null aggregate — show "—" */
+  totalAmount?: number;
+  totalLitres?: number;
 }
 
 function historyIso(v: unknown): string | undefined {
@@ -81,6 +82,19 @@ function normalizeImportHistoryBatch(b: any): ImportHistoryBatch {
       const c = b._count as Record<string, unknown>;
       count = Number(c._all ?? c.id ?? Object.values(c)[0] ?? 0);
     }
+    const rawAmt = sum.totalAmount ?? sum.total_amount;
+    const rawL = sum.litres ?? sum.total_litres ?? sum.totalLitres;
+    let totalAmount: number | undefined;
+    if (rawAmt != null && rawAmt !== '') {
+      const n = Number(rawAmt);
+      if (Number.isFinite(n)) totalAmount = n;
+    }
+    let totalLitres: number | undefined;
+    if (rawL != null && rawL !== '') {
+      const n = Number(rawL);
+      if (Number.isFinite(n)) totalLitres = n;
+    }
+
     return {
       id,
       importBatchId: importBatchId || id,
@@ -88,14 +102,8 @@ function normalizeImportHistoryBatch(b: any): ImportHistoryBatch {
       count: Number.isFinite(count) ? count : 0,
       txnMin: historyIso(min.txnDate ?? min.txn_date),
       txnMax: historyIso(max.txnDate ?? max.txn_date),
-      totalAmount: (() => {
-        const n = Number(sum.totalAmount ?? sum.total_amount ?? 0);
-        return Number.isFinite(n) ? n : 0;
-      })(),
-      totalLitres: (() => {
-        const n = Number(sum.litres ?? sum.total_litres ?? sum.totalLitres ?? 0);
-        return Number.isFinite(n) ? n : 0;
-      })(),
+      totalAmount,
+      totalLitres,
     };
   }
 
@@ -106,8 +114,8 @@ function normalizeImportHistoryBatch(b: any): ImportHistoryBatch {
     count: Number(b.imported ?? b.recordsImported ?? b._count ?? 0),
     txnMin: undefined,
     txnMax: undefined,
-    totalAmount: 0,
-    totalLitres: 0,
+    totalAmount: undefined,
+    totalLitres: undefined,
   };
 }
 
@@ -344,22 +352,34 @@ export default function BpclImportPage() {
                     <span className="font-mono text-[#0D2847] font-medium ml-2">{String(h.importBatchId || '—')}</span>
                   </div>
                   <span className="text-[#7A9AB8] text-xs">
-                    {h.createdAt ? String(formatBpclDate(h.createdAt)) : '—'}
+                    {h.createdAt
+                      ? new Date(h.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '—'}
                   </span>
                 </div>
                 <div className="text-[#1A4A7A] text-xs flex flex-wrap gap-x-4 gap-y-1">
                   <span>{String(formatNumber(Number.isFinite(h.count) ? h.count : 0))} transactions</span>
                   <span>
-                    Period:{' '}
+                    Date range:{' '}
                     {h.txnMin || h.txnMax
-                      ? `${h.txnMin ? String(formatBpclDate(h.txnMin)) : '—'} → ${h.txnMax ? String(formatBpclDate(h.txnMax)) : '—'}`
+                      ? `${h.txnMin ? formatDate(h.txnMin) : '—'} — ${h.txnMax ? formatDate(h.txnMax) : '—'}`
                       : '—'}
                   </span>
                 </div>
                 <div className="text-xs text-[#0D2847] flex flex-wrap gap-x-4 gap-y-1">
-                  <span>{String(formatNumber(Number.isFinite(h.totalLitres) ? h.totalLitres : 0))} L</span>
+                  <span>
+                    {h.totalLitres != null && Number.isFinite(h.totalLitres)
+                      ? `${h.totalLitres.toLocaleString('en-IN')} L`
+                      : '—'}
+                  </span>
                   <span className="font-semibold text-[#16A34A]">
-                    {String(formatInrTwoDecimals(Number.isFinite(h.totalAmount) ? h.totalAmount : 0))}
+                    {h.totalAmount != null && Number.isFinite(h.totalAmount)
+                      ? `₹${h.totalAmount.toLocaleString('en-IN')}`
+                      : '—'}
                   </span>
                 </div>
               </li>

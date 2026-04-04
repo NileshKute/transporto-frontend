@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, safe } from '@/lib/utils';
 import Link from 'next/link';
 import { Plus, AlertTriangle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -87,16 +87,16 @@ export default function InsurancePage() {
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((i: any) => (
                   <tr key={i.id} className={`${rowBg(i.status)} hover:bg-[#F4F6F8] transition-colors`}>
-                    <td className="px-4 py-3.5 text-sm font-mono font-semibold text-[#0D2847]">{i.vehicle?.regNumber}</td>
-                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{i.provider}</td>
-                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{i.policyNumber}</td>
+                    <td className="px-4 py-3.5 text-sm font-mono font-semibold text-[#0D2847]">{safe(i.vehicle?.regNumber)}</td>
+                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{safe(i.provider)}</td>
+                    <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{safe(i.policyNumber)}</td>
                     <td className="px-4 py-3.5"><span className="text-xs bg-[#F4F6F8] text-[#1A4A7A] px-2 py-0.5 rounded font-medium">{i.type?.replace(/_/g,' ')}</span></td>
                     <td className="px-4 py-3.5 font-mono font-semibold text-[#16A34A]">{formatCurrency(i.premium)}</td>
                     <td className="px-4 py-3.5 font-mono text-[#0D2847]">{i.coverAmount ? formatCurrency(i.coverAmount) : '—'}</td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{formatDate(i.startDate)}</td>
                     <td className={`px-4 py-3.5 text-xs font-medium ${i.status === 'EXPIRED' ? 'text-[#DC2626]' : i.status === 'EXPIRING_SOON' ? 'text-[#F59E0B]' : 'text-[#1A4A7A]'}`}>{formatDate(i.endDate)}</td>
                     <td className="px-4 py-3.5"><StatusBadge status={i.status} /></td>
-                    <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{i.agentName || '—'}</td>
+                    <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{safe(i.agentName)}</td>
                     <td className="px-4 py-3.5">
                       <button onClick={() => { setForm({ ...i, startDate: String(i.startDate || '').split('T')[0], endDate: String(i.endDate || '').split('T')[0] }); setEditItem(i); setModalOpen(true); }}
                         className="text-xs text-[#42A5F5] hover:text-[#1565C0] px-2 py-1 bg-[#42A5F5]/10 rounded-lg font-['Barlow_Condensed']">Edit</button>
@@ -117,7 +117,11 @@ export default function InsurancePage() {
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Vehicle *</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')}>
                 <option value="">Select Vehicle</option>
-                {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber} — {v.make}</option>)}
+                {vehicles?.map((v: any) => (
+                  <option key={v.id} value={v.id}>
+                    {safe(v.regNumber)} — {safe(v.make)}
+                  </option>
+                ))}
               </select>
             </div>
             {[['provider','Provider *'],['policyNumber','Policy Number *'],['premium','Premium (₹) *'],['coverAmount','Cover Amount (₹)'],['agentName','Agent Name'],['agentPhone','Agent Phone']].map(([n, l]) => (

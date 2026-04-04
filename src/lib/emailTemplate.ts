@@ -14,7 +14,7 @@ export function brandedEmailTemplate(content: string, _subject?: string): string
           </div>
           <div style="text-align:left;">
             <div style="color:#fff;font-size:16px;font-weight:bold;letter-spacing:2px;">G K ENTERPRISE</div>
-            <div style="color:#42A5F5;font-size:10px;letter-spacing:3px;">COLD CHAIN LOGISTICS</div>
+            <div style="color:#42A5F5;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;">FLEET OWNERS &amp; COLD CHAIN LOGISTICS SPECIALISTS</div>
           </div>
         </div>
       </div>
@@ -27,7 +27,7 @@ export function brandedEmailTemplate(content: string, _subject?: string): string
       <!-- Footer -->
       <div style="background:#F4F6F8;padding:20px;border-top:1px solid #E0E8F0;text-align:center;">
         <p style="color:#7A9AB8;font-size:11px;margin:0;">
-          G K Enterprise | COLD CHAIN LOGISTICS | Since 2019<br>
+          G K Enterprise | FLEET OWNERS &amp; COLD CHAIN LOGISTICS SPECIALISTS | Since 2019<br>
           Shree Ganesh CHS, 402, Plot 151, Phase II, Navde, Taloja, Panvel, Maharashtra 410208<br>
           +91 9324540988 | ganesh@gkenterprise.in | www.gkenterprise.in
         </p>

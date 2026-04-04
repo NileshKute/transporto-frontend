@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, safe } from '@/lib/utils';
 import { AlertTriangle, MapPin, Plus, CheckCircle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -78,15 +78,25 @@ export default function EmergenciesPage() {
                 </div>
                 <StatusBadge status={e.status} />
               </div>
-              <p className="text-xs text-[#7A9AB8] mb-3 line-clamp-2">{e.description}</p>
+              <p className="text-xs text-[#7A9AB8] mb-3 line-clamp-2">{typeof e.description === 'string' ? e.description : safe(e.description)}</p>
               <div className="space-y-1.5 mb-4">
                 <div className="flex items-center gap-2 text-xs text-[#1A4A7A]">
-                  <span className="font-mono text-[#42A5F5]">{e.vehicle?.regNumber}</span>
+                  <span className="font-mono text-[#42A5F5]">{safe(e.vehicle?.regNumber)}</span>
                   <span>•</span>
-                  <span>{e.driver?.name}</span>
+                  <span>{safe(e.driver?.name)}</span>
                 </div>
-                {e.location && <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]"><MapPin className="w-3 h-3 text-[#DC2626]" />{e.location}</div>}
-                {e.driver?.phone && <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]"><Phone className="w-3 h-3" />{e.driver.phone}</div>}
+                {e.location != null && String(e.location) !== '' && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]">
+                    <MapPin className="w-3 h-3 text-[#DC2626]" />
+                    {safe(e.location)}
+                  </div>
+                )}
+                {e.driver?.phone != null && String(e.driver.phone) !== '' && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#1A4A7A]">
+                    <Phone className="w-3 h-3" />
+                    {safe(e.driver.phone)}
+                  </div>
+                )}
                 <p className="text-xs text-[#1A4A7A]">{formatDateTime(e.createdAt)}</p>
               </div>
               {['PENDING','ACKNOWLEDGED','IN_PROGRESS'].includes(e.status) && (

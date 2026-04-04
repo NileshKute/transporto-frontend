@@ -536,11 +536,11 @@ function AddEntryModal({ isOpen, onClose, driverId, onSave, isPending }: {
     e.preventDefault();
     const errors: Record<string, string> = {};
     if (!driverId?.trim()) errors.driverId = 'Driver is required';
-    if (!form.type?.trim()) errors.type = 'Type is required';
+    if (!form.type?.trim()) errors.type = 'Entry type is required';
     if (!form.date?.trim()) errors.date = 'Date is required';
     const amt = Number(form.amount);
-    if (form.amount === '' || !Number.isFinite(amt) || amt === 0) {
-      errors.amount = 'Enter a valid non-zero amount';
+    if (form.amount === '' || !Number.isFinite(amt) || amt <= 0) {
+      errors.amount = 'Valid amount is required';
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);

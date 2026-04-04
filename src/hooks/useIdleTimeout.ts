@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { logout } from '@/lib/auth';
 
-export function useIdleTimeout(timeoutMs: number = 120000) {
+/** Default 5 minutes — dashboard layout passes the same explicitly. */
+export function useIdleTimeout(timeoutMs: number = 300000) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {

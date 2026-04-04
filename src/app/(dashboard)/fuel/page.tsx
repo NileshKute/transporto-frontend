@@ -100,14 +100,22 @@ export default function FuelPage() {
               <label className="block text-xs font-medium text-[#475569] mb-1.5">Vehicle *</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')} className="border border-[#cbd5e1] rounded-lg">
                 <option value="">Select Vehicle</option>
-                {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber} — {v.make}</option>)}
+                {vehicles?.map((v: any) => (
+                  <option key={v.id} value={v.id}>
+                    {safe(v.regNumber)} — {safe(v.make)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')} className="border border-[#cbd5e1] rounded-lg">
                 <option value="">Select Driver</option>
-                {drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {drivers?.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {safe(d.name)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

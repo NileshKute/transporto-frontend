@@ -108,7 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  useIdleTimeout(300000);
+  useIdleTimeout(300000); // 5 minutes
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
@@ -226,7 +226,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div>
               <div className="font-['Oswald'] text-sm font-bold text-white tracking-wider">G K ENTERPRISE</div>
-              <div className="font-['Barlow_Condensed'] text-[10px] text-[#42A5F5] tracking-[3px] uppercase">COLD CHAIN LOGISTICS</div>
+              <div className="font-['Barlow_Condensed'] text-[9px] leading-tight text-[#42A5F5] tracking-[0.12em] uppercase">
+                Fleet owners &amp; cold chain logistics specialists
+              </div>
             </div>
             <button className="ml-auto lg:hidden text-[#64B5F6] hover:text-white" onClick={() => setSidebarOpen(false)}>
               <X size={20} />

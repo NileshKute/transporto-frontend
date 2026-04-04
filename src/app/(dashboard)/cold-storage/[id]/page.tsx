@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, safe, safeNumber } from '@/lib/utils';
 import { ArrowLeft, Plus, Thermometer } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
@@ -62,11 +62,18 @@ export default function ColdStorageDetailPage() {
   if (isLoading) return <LoadingSpinner />;
   if (!unit) return <EmptyState message="Unit not found" />;
 
-  const chartData = logs?.map((l: any) => ({
-    time: new Date(l.recordedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-    temp: l.temperature,
-    humidity: l.humidity,
-  })) || [];
+  const chartData =
+    logs?.map((l: any) => {
+      const t = l.recordedAt ? new Date(l.recordedAt).getTime() : NaN;
+      const tempN = safeNumber(l.temperature, NaN);
+      return {
+        time: Number.isFinite(t)
+          ? new Date(l.recordedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+          : '—',
+        temp: Number.isFinite(tempN) ? tempN : 0,
+        humidity: safeNumber(l.humidity, 0),
+      };
+    }) || [];
 
   const latestTemp = unit.temperatureLogs?.[0]?.temperature;
   const tempColor = unit.status === 'CRITICAL' ? 'text-[#DC2626]' : unit.status === 'WARNING' ? 'text-[#F59E0B]' : 'text-[#16A34A]';
@@ -76,8 +83,10 @@ export default function ColdStorageDetailPage() {
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="p-2 text-[#7A9AB8] hover:text-[#0D2847] hover:bg-[#F4F6F8] rounded-lg"><ArrowLeft className="w-4 h-4" /></button>
         <div className="flex-1">
-          <h2 className="text-xl font-bold text-[#0D2847]">{unit.name}</h2>
-          <p className="text-sm text-[#7A9AB8]">{unit.type?.replace(/_/g,' ')} • Sensor: {unit.sensorId}</p>
+          <h2 className="text-xl font-bold text-[#0D2847]">{safe(unit.name)}</h2>
+          <p className="text-sm text-[#7A9AB8]">
+            {String(unit.type ?? '').replace(/_/g, ' ')} • Sensor: {safe(unit.sensorId)}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={unit.status} size="md" />
@@ -92,7 +101,12 @@ export default function ColdStorageDetailPage() {
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
           <p className="text-xs text-[#7A9AB8] mb-2">Current Temp</p>
           <p className={`text-3xl font-bold font-mono ${tempColor}`}>{latestTemp != null ? `${latestTemp}°C` : '—'}</p>
-          <p className="text-xs text-[#7A9AB8] mt-1">Target: {unit.targetTemp}°C</p>
+          <p className="text-xs text-[#7A9AB8] mt-1">
+            Target:{' '}
+            {unit.targetTemp != null && Number.isFinite(Number(unit.targetTemp))
+              ? `${Number(unit.targetTemp)}°C`
+              : '—'}
+          </p>
         </div>
         <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
           <p className="text-xs text-[#7A9AB8] mb-2">Humidity</p>

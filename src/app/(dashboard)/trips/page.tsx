@@ -133,14 +133,22 @@ export default function TripsPage() {
               <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Vehicle *</label>
               <select value={form.vehicleId || ''} onChange={f('vehicleId')}>
                 <option value="">Select Vehicle</option>
-                {vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.regNumber} — {v.make} {v.model}</option>)}
+                {vehicles?.map((v: any) => (
+                  <option key={v.id} value={v.id}>
+                    {safe(v.regNumber)} — {safe(v.make)} {safe(v.model)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')}>
                 <option value="">Select Driver</option>
-                {drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.name} — {d.phone}</option>)}
+                {drivers?.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {safe(d.name)} — {safe(d.phone)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

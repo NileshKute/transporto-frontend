@@ -182,8 +182,9 @@ export default function BpclCardsPage() {
     for (const row of periodRows) {
       const rowErr: { startDate?: string; tag?: string } = {};
       if (!String(row.startDate ?? '').trim()) rowErr.startDate = 'Start date is required';
+      const tagStr = String(row.tag ?? '').trim();
       const tagOk = row.tag === 'BUSINESS' || row.tag === 'PERSONAL' || row.tag === 'IGNORE';
-      if (!tagOk) rowErr.tag = 'Tag is required';
+      if (!tagStr || !tagOk) rowErr.tag = 'Card tag is required';
       if (Object.keys(rowErr).length > 0) errs[row.id] = rowErr;
     }
     if (Object.keys(errs).length > 0) {

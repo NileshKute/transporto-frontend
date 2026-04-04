@@ -393,8 +393,8 @@ function MaintenancePageInner() {
   const submitRecord = () => {
     const errors: Record<string, string> = {};
     if (!form.vehicleId) errors.vehicleId = 'Vehicle is required';
-    if (!form.maintenanceTypeId) errors.typeId = 'Maintenance type is required';
-    if (!form.date) errors.date = 'Date is required';
+    if (!form.maintenanceTypeId?.trim()) errors.typeId = 'Maintenance type is required';
+    if (!form.date?.trim()) errors.date = 'Date is required';
     const laborN = safeNumber(form.laborCost, 0);
     const partsN = safeNumber(form.partsCost, 0);
     const totalN = form.totalCost !== '' ? safeNumber(form.totalCost, laborN + partsN) : laborN + partsN;

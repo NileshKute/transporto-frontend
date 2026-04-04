@@ -252,10 +252,15 @@ export default function BpclTransactionsPage() {
   const totalLitres = safeNum(txRes?.totalLitres, 0);
   const totalAmount = safeNum(txRes?.totalAmount, 0);
   const avgRate = safeNum(txRes?.avgRate, 0);
+  const avgRatePerL = totalLitres > 0 ? totalAmount / totalLitres : avgRate;
+  const avgRateDisplay =
+    avgRatePerL > 0
+      ? `₹${avgRatePerL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L`
+      : '—';
   const litresDisplay =
     totalLitres > 0
       ? `${safeNum(totalLitres).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`
-      : '0.00 L';
+      : '0';
 
   return (
     <div className="space-y-5">
@@ -371,12 +376,7 @@ export default function BpclTransactionsPage() {
               title="Total amount"
               value={String(formatInrTwoDecimals(safeNum(totalAmount)))}
             />
-            <StatCard
-              icon={Gauge}
-              iconColor="green"
-              title="Avg rate / litre"
-              value={String(avgRate > 0 ? formatInrTwoDecimals(safeNum(avgRate)) : '—')}
-            />
+            <StatCard icon={Gauge} iconColor="green" title="Avg rate" value={String(avgRateDisplay)} />
           </>
         )}
       </div>

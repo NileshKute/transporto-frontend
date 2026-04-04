@@ -140,8 +140,9 @@ export default function VehiclesPage() {
 
   const exportVehicles = async () => {
     try {
-      const res = await api.get('/vehicles?limit=1000');
-      const vehicles = res.data.data || res.data;
+      const res = await api.get('/vehicles', { params: { limit: 1000, page: 1 } });
+      const raw = res.data?.data ?? res.data;
+      const vehicles = Array.isArray(raw) ? raw : [];
 
       const headers = ['Reg Number', 'Make', 'Model', 'Year', 'Fuel Type', 'Status', 'Current KM', 'PUC Expiry', 'Insurance Expiry', 'Fitness Expiry', 'Permit Expiry'];
 
@@ -149,10 +150,10 @@ export default function VehiclesPage() {
         v.regNumber || '',
         v.make || '',
         v.model || '',
-        v.year || '',
+        v.year ?? '',
         v.fuelType || '',
         v.status || '',
-        v.currentKm || '',
+        v.currentKm ?? '',
         v.pucExpiryDate ? new Date(v.pucExpiryDate).toLocaleDateString('en-IN') : '',
         v.insuranceExpiryDate ? new Date(v.insuranceExpiryDate).toLocaleDateString('en-IN') : '',
         v.fitnessExpiryDate ? new Date(v.fitnessExpiryDate).toLocaleDateString('en-IN') : '',
@@ -160,21 +161,22 @@ export default function VehiclesPage() {
       ]);
 
       const csvContent = [headers, ...rows]
-        .map(row => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .map((row) => row.map((cell: unknown) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
         .join('\n');
 
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Vehicles_Export_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `vehicles_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${vehicles.length} vehicle(s)`);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 
