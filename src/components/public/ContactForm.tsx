@@ -5,6 +5,17 @@ import { useState, type FormEvent } from 'react';
 const inputClass =
   'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[#42A5F5] focus:outline-none';
 
+const validatePhone = (phone: string): boolean => {
+  if (!phone.trim()) return true; // phone is optional
+  const cleaned = phone.replace(/[\s\-()]/g, '');
+  // Accept: 10 digits, or +91 followed by 10 digits, or 0 followed by 10 digits
+  return /^(\+91[-\s]?)?[0]?(91)?[6789]\d{9}$/.test(cleaned);
+};
+
+const validateEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 export function ContactForm() {
   const [formData, setFormData] = useState({
     name: '',
@@ -20,6 +31,16 @@ export function ContactForm() {
 
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
       alert('Please fill in Name, Email and Message');
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    if (formData.phone && !validatePhone(formData.phone)) {
+      alert('Please enter a valid Indian phone number (10 digits)');
       return;
     }
 
@@ -83,7 +104,8 @@ export function ContactForm() {
 
       <input
         type="tel"
-        placeholder="Your Phone"
+        placeholder="Your Phone (e.g. 9876543210)"
+        maxLength={13}
         value={formData.phone}
         onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
         className={inputClass}
@@ -103,6 +125,8 @@ export function ContactForm() {
         placeholder="Your Message *"
         required
         rows={5}
+        spellCheck
+        lang="en"
         value={formData.message}
         onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
         className={`${inputClass} resize-none`}
