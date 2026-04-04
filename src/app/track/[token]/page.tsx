@@ -41,6 +41,7 @@ interface TrackLive {
   movingSince?: string | null;
   lastSyncAt?: string;
   direction?: number | null;
+  iconType?: string;
 }
 
 interface TrackPayload {
@@ -308,6 +309,7 @@ export default function PublicTrackPage() {
                 longitude={hasValidCoords ? lng : null}
                 status={status}
                 direction={live?.direction}
+                iconType={live?.iconType}
                 regNumber={reg}
                 speed={speed}
                 temperature={temp}

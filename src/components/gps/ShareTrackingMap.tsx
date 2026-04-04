@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { buildTruckMarkerDivIcon } from './truckIcons';
 
 const DEFAULT_CENTER: [number, number] = [19.033, 73.0297];
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
@@ -29,82 +30,53 @@ function fixLeafletDefaultIcons() {
   });
 }
 
-function statusStyle(status: string): { bg: string; border: string; text: string } {
+function shareStatusPulseColor(status: string): string {
   switch (status) {
     case 'MOVING':
-      return { bg: '#22c55e', border: '#16a34a', text: '#fff' };
+      return '#22c55e';
     case 'HALTED':
-      return { bg: '#ef4444', border: '#dc2626', text: '#fff' };
+      return '#ef4444';
     case 'LONG_HALT':
-      return { bg: '#f97316', border: '#ea580c', text: '#fff' };
-    case 'OFFLINE':
-    case 'IDLE':
+      return '#f97316';
     default:
-      return { bg: '#9ca3af', border: '#6b7280', text: '#fff' };
+      return '#94a3b8';
   }
 }
 
 function createShareMarkerIcon(
   status: string,
-  options?: {
+  options: {
+    iconType?: string;
     direction?: number | null;
     temperature?: number | null;
     speed?: number | null;
   }
 ): L.DivIcon {
   const st = status || 'OFFLINE';
-  const c = statusStyle(st);
-  const t = options?.temperature != null ? Number(options.temperature) : NaN;
-  const spd = options?.speed != null ? Number(options.speed) : NaN;
-  const dir = options?.direction != null ? Number(options.direction) : NaN;
-  const hasDir = !Number.isNaN(dir);
+  const t = options.temperature != null ? Number(options.temperature) : NaN;
+  const spd = options.speed != null ? Number(options.speed) : NaN;
+  const pulse = shareStatusPulseColor(st);
 
   const tempBadge =
-    options?.temperature != null && !Number.isNaN(t)
-      ? `<div style="position:absolute;top:-8px;right:-12px;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:8px;font-weight:700;padding:1px 3px;border-radius:6px;border:1px solid #fff;">${t.toFixed(0)}°</div>`
+    options.temperature != null && !Number.isNaN(t)
+      ? `<div style="position:absolute;top:-4px;right:-8px;z-index:2;background:${t < 0 ? '#3b82f6' : t < 10 ? '#06b6d4' : '#ef4444'};color:#fff;font-size:8px;font-weight:700;padding:1px 3px;border-radius:6px;border:1px solid #fff;">${t.toFixed(0)}°</div>`
       : '';
 
   const speedBadge =
     st === 'MOVING' && !Number.isNaN(spd) && spd > 0
-      ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0D2847;color:#fff;font-size:7px;font-weight:600;padding:1px 3px;border-radius:4px;border:1px solid #fff;">${Math.round(spd)}</div>`
+      ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);z-index:2;background:#0D2847;color:#fff;font-size:7px;font-weight:600;padding:1px 3px;border-radius:4px;border:1px solid #fff;">${Math.round(spd)}</div>`
       : '';
 
   const pulseRing =
     st === 'MOVING'
-      ? `<div style="position:absolute;top:10px;left:-4px;width:40px;height:40px;border-radius:50%;background:${c.bg}33;animation:pulse 2s infinite;pointer-events:none;"></div>`
+      ? `<div style="position:absolute;top:2px;left:2px;width:52px;height:52px;border-radius:50%;background:${pulse}33;animation:pulse 2s infinite;pointer-events:none;z-index:0;"></div>`
       : '';
 
-  const arrowBlock = hasDir
-    ? `<div style="position:absolute;top:0;left:50%;width:14px;height:14px;margin-left:-7px;display:flex;justify-content:center;transform:rotate(${dir}deg);transform-origin:50% 38px;pointer-events:none;">
-         <svg width="12" height="12" viewBox="0 0 24 24" style="margin-top:2px;">
-           <path fill="#0D2847" stroke="#fff" stroke-width="1" d="M12 3 L21 19 L12 15 L3 19 Z"/>
-         </svg>
-       </div>`
-    : '';
-
-  const html = `
-    <div style="position:relative;width:32px;height:48px;">
-      ${arrowBlock}
-      ${pulseRing}
-      <div style="position:absolute;bottom:0;left:0;width:32px;height:32px;background:${c.bg};border:2px solid ${c.border};border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${c.text}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 3h15v13H1z"/>
-          <path d="M16 8h4l3 3v5h-7V8z"/>
-          <circle cx="5.5" cy="18.5" r="2.5"/>
-          <circle cx="18.5" cy="18.5" r="2.5"/>
-        </svg>
-      </div>
-      ${tempBadge}
-      ${speedBadge}
-    </div>
-  `;
-
-  return L.divIcon({
-    html,
-    className: 'custom-truck-marker',
-    iconSize: [32, 48],
-    iconAnchor: [16, 48],
-    popupAnchor: [0, -48],
+  return buildTruckMarkerDivIcon({
+    iconType: options.iconType,
+    status: st,
+    direction: options.direction,
+    badges: { tempHtml: tempBadge, speedHtml: speedBadge, pulseRingHtml: pulseRing },
   });
 }
 
@@ -153,6 +125,7 @@ export function ShareTrackingMap({
   longitude,
   status,
   direction,
+  iconType,
   regNumber,
   speed,
   temperature,
@@ -162,6 +135,7 @@ export function ShareTrackingMap({
   longitude: number | null;
   status: string;
   direction?: number | null;
+  iconType?: string;
   regNumber: string;
   speed: number;
   temperature: number | null;
@@ -188,11 +162,12 @@ export function ShareTrackingMap({
   const icon = useMemo(
     () =>
       createShareMarkerIcon(status || 'OFFLINE', {
+        iconType,
         direction,
         temperature,
         speed,
       }),
-    [status, direction, temperature, speed]
+    [status, iconType, direction, temperature, speed]
   );
 
   const tempStr =

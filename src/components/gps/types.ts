@@ -5,9 +5,16 @@ export function vehicleReg(v: GpsVehicle): string {
 }
 
 export interface GpsVehicle {
+  id?: string;
   regNumber?: string;
   registrationNumber?: string;
   geoTrackerKey?: string;
+  /** Map marker SVG type from fleet settings */
+  iconType?: string;
+  /** Degrees clockwise from north (0–360) */
+  direction?: number | null;
+  make?: string;
+  model?: string;
   latitude?: number;
   longitude?: number;
   speed?: number;
