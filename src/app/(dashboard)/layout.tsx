@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings, Upload, CreditCard,
+  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin,
 } from 'lucide-react';
 
 const navGroups = [
@@ -19,6 +19,7 @@ const navGroups = [
     items: [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
       { href: '/vehicles', icon: Truck, label: 'Vehicles' },
+      { href: '/gps', icon: MapPin, label: 'GPS Tracking' },
       { href: '/drivers', icon: Users, label: 'Drivers' },
       { href: '/trips', icon: Route, label: 'Trips' },
       { href: '/fuel', icon: Fuel, label: 'Fuel' },
@@ -149,6 +150,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/vehicles')) {
       items.push({ label: 'Vehicles', href: '/vehicles' });
       if (pathname !== '/vehicles') items.push({ label: 'Detail' });
+      return items;
+    }
+    if (pathname.startsWith('/gps')) {
+      items.push({ label: 'GPS Live Tracking', href: '/gps' });
       return items;
     }
     if (pathname.startsWith('/drivers')) {

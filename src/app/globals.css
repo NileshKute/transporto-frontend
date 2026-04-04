@@ -142,3 +142,9 @@ button, a, input, select, [role="button"] {
   background-image: radial-gradient(rgba(100, 181, 246, 0.12) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* Leaflet divIcon markers — remove default square background */
+.leaflet-div-icon.gps-leaflet-marker {
+  background: transparent !important;
+  border: none !important;
+}
