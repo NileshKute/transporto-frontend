@@ -136,9 +136,10 @@ export function extractRcDataFromResponse(raw: unknown): Record<string, string |
     cubicCapacity: pickString(flat, ['cubicCapacity', 'engineDisplacement', 'vehicleCC', 'cc', 'engineCC']) || null,
     numCylinders: pickString(flat, ['numCylinders', 'cylinders', 'noOfCylinders', 'no_of_cylinder']) || null,
     seatingCapacity: pickString(flat, ['seatingCapacity', 'seats', 'seatCap', 'noOfSeats']) || null,
-    wheelbaseMm: pickString(flat, ['wheelbaseMm', 'wheelbase', 'wheel_base']) || null,
-    grossVehicleWeightKg: pickString(flat, ['grossVehicleWeightKg', 'grossVehicleWeight', 'gvw', 'gross_weight']) || null,
-    unladenWeightKg: pickString(flat, ['unladenWeightKg', 'unladenWeight', 'ulw', 'unladen_weight']) || null,
+    /** Prisma: wheelbase (mm) — API may send wheelbaseMm */
+    wheelbase: pickString(flat, ['wheelbase', 'wheelbaseMm', 'wheel_base']) || null,
+    grossVehicleWeight: pickString(flat, ['grossVehicleWeight', 'grossVehicleWeightKg', 'gvw', 'gross_weight']) || null,
+    unladenWeight: pickString(flat, ['unladenWeight', 'unladenWeightKg', 'ulw', 'unladen_weight']) || null,
     loadCapacityKg: pickString(flat, ['loadCapacityKg', 'payload', 'load_capacity']) || null,
     year: yearRaw || null,
     rcNumber: pickString(flat, ['rcNumber', 'rc_number', 'rcNo']) || null,
@@ -335,14 +336,14 @@ export function buildRcPreview(
   }
   pushFillRow(specRows, applyPatch, 'numCylinders', 'Cylinders', current, fetched.numCylinders);
   pushFillRow(specRows, applyPatch, 'seatingCapacity', 'Seats', current, fetched.seatingCapacity);
-  if (fetched.wheelbaseMm) {
-    pushFillRow(specRows, applyPatch, 'wheelbaseMm', 'Wheelbase', current, fetched.wheelbaseMm, (s) => `${s} mm`);
+  if (fetched.wheelbase) {
+    pushFillRow(specRows, applyPatch, 'wheelbase', 'Wheelbase', current, fetched.wheelbase, (s) => `${s} mm`);
   }
-  if (fetched.grossVehicleWeightKg) {
-    pushFillRow(specRows, applyPatch, 'grossVehicleWeightKg', 'GVW', current, fetched.grossVehicleWeightKg, (s) => `${s} kg`);
+  if (fetched.grossVehicleWeight) {
+    pushFillRow(specRows, applyPatch, 'grossVehicleWeight', 'GVW', current, fetched.grossVehicleWeight, (s) => `${s} kg`);
   }
-  if (fetched.unladenWeightKg) {
-    pushFillRow(specRows, applyPatch, 'unladenWeightKg', 'Unladen', current, fetched.unladenWeightKg, (s) => `${s} kg`);
+  if (fetched.unladenWeight) {
+    pushFillRow(specRows, applyPatch, 'unladenWeight', 'Unladen', current, fetched.unladenWeight, (s) => `${s} kg`);
   }
   if (fetched.loadCapacityKg) {
     pushFillRow(specRows, applyPatch, 'loadCapacityKg', 'Load capacity', current, fetched.loadCapacityKg, (s) => `${s} kg`);
@@ -502,14 +503,14 @@ export function coerceVehicleRcPatch(patch: Record<string, unknown>): Record<str
   if (typeof out.fuelType === 'string') {
     out.fuelType = coerceFuelType(out.fuelType);
   }
-  const intKeys = ['ownerNumber', 'numCylinders', 'seatingCapacity', 'wheelbaseMm', 'cubicCapacity'];
+  const intKeys = ['ownerNumber', 'numCylinders', 'seatingCapacity', 'wheelbase', 'cubicCapacity'];
   for (const k of intKeys) {
     if (out[k] != null && out[k] !== '') {
       const n = parseInt(String(out[k]).replace(/\D/g, ''), 10);
       if (!Number.isNaN(n)) out[k] = n;
     }
   }
-  const numKeys = ['grossVehicleWeightKg', 'unladenWeightKg', 'loadCapacityKg'];
+  const numKeys = ['grossVehicleWeight', 'unladenWeight', 'loadCapacityKg'];
   for (const k of numKeys) {
     if (out[k] != null && out[k] !== '') {
       const n = parseFloat(String(out[k]).replace(/,/g, ''));

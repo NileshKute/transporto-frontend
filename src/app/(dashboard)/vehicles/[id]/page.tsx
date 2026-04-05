@@ -204,11 +204,11 @@ export default function VehicleDetailPage() {
   if (ccStr) vehicleItems.push({ label: 'CC', value: ccStr });
   push('Cylinders', pickVehicleField(vr, ['numCylinders', 'cylinders', 'noOfCylinders']));
   push('Seats', pickVehicleField(vr, ['seatingCapacity', 'seats', 'seatCap']));
-  const wb = withUnit(pickVehicleField(vr, ['wheelbaseMm', 'wheelbase']), 'mm');
+  const wb = withUnit(pickVehicleField(vr, ['wheelbase', 'wheelbaseMm']), 'mm');
   if (wb) vehicleItems.push({ label: 'Wheelbase', value: wb });
-  const gvw = withUnit(pickVehicleField(vr, ['grossVehicleWeightKg', 'grossVehicleWeight', 'gvw']), 'kg');
+  const gvw = withUnit(pickVehicleField(vr, ['grossVehicleWeight', 'grossVehicleWeightKg', 'gvw']), 'kg');
   if (gvw) vehicleItems.push({ label: 'GVW', value: gvw });
-  const ulw = withUnit(pickVehicleField(vr, ['unladenWeightKg', 'unladenWeight', 'ulw']), 'kg');
+  const ulw = withUnit(pickVehicleField(vr, ['unladenWeight', 'unladenWeightKg', 'ulw']), 'kg');
   if (ulw) vehicleItems.push({ label: 'Unladen', value: ulw });
   const load = withUnit(pickVehicleField(vr, ['loadCapacityKg', 'payload']), 'kg');
   if (load) vehicleItems.push({ label: 'Load cap.', value: load });
