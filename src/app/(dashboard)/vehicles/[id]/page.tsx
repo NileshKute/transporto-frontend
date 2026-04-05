@@ -255,7 +255,7 @@ export default function VehicleDetailPage() {
       </div>
     ) : null;
 
-  const financer = pickVehicleField(vr, ['financerName', 'financer', 'financingBank', 'hypothecation']);
+  const financer = pickVehicleField(vr, ['financer', 'financingBank', 'hypothecation']);
   const isFinanced =
     vr.isFinanced === true ||
     vr.isFinanced === 'true' ||

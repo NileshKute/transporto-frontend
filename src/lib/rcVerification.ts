@@ -147,7 +147,7 @@ export function extractRcDataFromResponse(raw: unknown): Record<string, string |
     registeredAt: pickString(flat, ['registeredAt', 'rto', 'registeredRTO', 'registrationLocation', 'regn_at', 'rtoName']) || null,
     rcStatus: pickString(flat, ['rcStatus', 'status', 'rc_status', 'rcStatusDesc', 'vehicleStatus']) || null,
     isFinanced: pickBoolString(flat, ['isFinanced', 'financed', 'finance', 'hypothecated']),
-    financerName: pickString(flat, ['financerName', 'financer', 'financingBank', 'hpaBank', 'hypothecation']) || null,
+    financer: pickString(flat, ['financer', 'financingBank', 'hpaBank', 'hypothecation']) || null,
     insuranceCompany: pickString(flat, ['insuranceCompany', 'insurerName', 'insurance_company']) || null,
     insurancePolicyNumber: pickString(flat, ['insurancePolicyNumber', 'policyNumber', 'insurance_policy_no']) || null,
     insuranceExpiryDate: pickDate(flat, ['insuranceExpiryDate', 'insuranceUpto', 'insurance_valid_upto', 'insuranceUptoDate']),
@@ -367,8 +367,8 @@ export function buildRcPreview(
   if (regRows.length) sections.push({ id: 'registration', title: 'Registration', rows: regRows });
 
   const finRows: RcPreviewRow[] = [];
-  if (fetched.financerName) {
-    pushFillRow(finRows, applyPatch, 'financerName', 'Financer', current, fetched.financerName);
+  if (fetched.financer) {
+    pushFillRow(finRows, applyPatch, 'financer', 'Financer', current, fetched.financer);
   }
   if (fetched.isFinanced) {
     const inc = fetched.isFinanced;
