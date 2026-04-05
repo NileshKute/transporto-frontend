@@ -1,4 +1,5 @@
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateDdMmYyyy } from '@/lib/utils';
+import { formatEmissionShort, formatOwnerSerialDisplay } from '@/lib/vehicleDisplay';
 
 export type RcPreviewBadge = 'NEW' | 'KEPT' | 'UPD';
 
@@ -20,10 +21,21 @@ export type RcPreviewResult = {
   sections: RcPreviewSection[];
   applyPatch: Record<string, unknown>;
   updateCount: number;
-  rcStatusLine?: string;
 };
 
-const DISPLAY_ONLY_KEYS = new Set(['fatherName', 'vehicleClass']);
+const PATCH_NEVER = new Set(['fatherName']);
+
+/** When RC sends a value, treat as refreshed from government (blue UPD + patch). */
+const FORCE_UPDATE_KEYS = new Set([
+  'fuelType',
+  'rcStatus',
+  'insurancePolicyNumber',
+  'insuranceCompany',
+  'pucNumber',
+  'blacklistStatus',
+  'nocDetails',
+  'nonUseStatus',
+]);
 
 function unwrapApiPayload(raw: unknown): Record<string, unknown> {
   if (raw == null || typeof raw !== 'object') return {};
@@ -85,7 +97,17 @@ function pickDate(src: Record<string, unknown>, keys: string[]): string | null {
   return null;
 }
 
-/** Flatten common SurePass / backend shapes into canonical keys */
+function pickBoolString(src: Record<string, unknown>, keys: string[]): string | null {
+  for (const k of keys) {
+    const v = src[k];
+    if (v === true || v === 'true' || v === 'Y' || v === 'Yes' || v === 'yes') return 'true';
+    if (v === false || v === 'false' || v === 'N' || v === 'No' || v === 'no') return 'false';
+    if (v != null && String(v).trim() !== '') return String(v).trim();
+  }
+  return null;
+}
+
+/** Flatten SurePass / backend shapes into canonical keys (string | null). */
 export function extractRcDataFromResponse(raw: unknown): Record<string, string | null> {
   const flat = mergeNestedRc(unwrapApiPayload(raw));
 
@@ -97,21 +119,45 @@ export function extractRcDataFromResponse(raw: unknown): Record<string, string |
     regNumber: pickString(flat, ['regNumber', 'registrationNumber', 'vehicleNumber', 'rc_regn_no', 'reg_no']) || null,
     ownerName: pickString(flat, ['ownerName', 'registeredOwner', 'owner', 'owner_name']) || null,
     fatherName: pickString(flat, ['fatherName', 'father_name', 'fathersName', 'father']) || null,
+    ownerAddress: pickString(flat, ['ownerAddress', 'address', 'owner_address', 'registeredAddress', 'permanentAddress']) || null,
+    ownerNumber: pickString(flat, ['ownerSerial', 'ownerSerialNumber', 'owner_number', 'ownerNo', 'ownerSequence']) || null,
     make: pickString(flat, ['make', 'maker', 'vehicleMake', 'manufacturer']) || null,
     model: pickString(flat, ['model', 'vehicleModel']) || null,
+    variant: pickString(flat, ['variant', 'vehicleVariant', 'modelVariant']) || null,
     vehicleClass: pickString(flat, ['vehicleClass', 'class', 'vehicle_class', 'rcVehicleClass', 'vehicleCatgory']) || null,
+    vehicleClassDesc: pickString(flat, ['vehicleClassDesc', 'classDescription', 'vehicle_class_desc', 'vehicleClassDescription']) || null,
+    vehicleCategory: pickString(flat, ['vehicleCategory', 'category', 'rcCategory', 'vehicleCat']) || null,
     fuelType: pickString(flat, ['fuelType', 'fuel', 'fuel_type', 'fuelTypeDesc']) || null,
     color: pickString(flat, ['color', 'colour']) || null,
+    bodyType: pickString(flat, ['bodyType', 'body_type', 'vehicleBodyType']) || null,
+    emissionNorms: pickString(flat, ['emissionNorms', 'norms', 'emission_norms', 'standards', 'emissionStandard']) || null,
     engineNumber: pickString(flat, ['engineNumber', 'engineNo', 'engine_no']) || null,
     chassisNumber: pickString(flat, ['chassisNumber', 'chassisNo', 'chassis_no']) || null,
+    cubicCapacityCc: pickString(flat, ['cubicCapacityCc', 'cubicCapacity', 'engineDisplacement', 'vehicleCC', 'cc', 'engineCC']) || null,
+    numCylinders: pickString(flat, ['numCylinders', 'cylinders', 'noOfCylinders', 'no_of_cylinder']) || null,
+    seatingCapacity: pickString(flat, ['seatingCapacity', 'seats', 'seatCap', 'noOfSeats']) || null,
+    wheelbaseMm: pickString(flat, ['wheelbaseMm', 'wheelbase', 'wheel_base']) || null,
+    grossVehicleWeightKg: pickString(flat, ['grossVehicleWeightKg', 'grossVehicleWeight', 'gvw', 'gross_weight']) || null,
+    unladenWeightKg: pickString(flat, ['unladenWeightKg', 'unladenWeight', 'ulw', 'unladen_weight']) || null,
+    loadCapacityKg: pickString(flat, ['loadCapacityKg', 'payload', 'load_capacity']) || null,
     year: yearRaw || null,
     rcNumber: pickString(flat, ['rcNumber', 'rc_number', 'rcNo']) || null,
+    registrationDate: pickDate(flat, ['registrationDate', 'regDate', 'dateOfRegistration', 'regn_dt']),
+    registeredAt: pickString(flat, ['registeredAt', 'rto', 'registeredRTO', 'registrationLocation', 'regn_at', 'rtoName']) || null,
+    rcStatus: pickString(flat, ['rcStatus', 'status', 'rc_status', 'rcStatusDesc', 'vehicleStatus']) || null,
+    isFinanced: pickBoolString(flat, ['isFinanced', 'financed', 'finance', 'hypothecated']),
+    financerName: pickString(flat, ['financerName', 'financer', 'financingBank', 'hpaBank', 'hypothecation']) || null,
+    insuranceCompany: pickString(flat, ['insuranceCompany', 'insurerName', 'insurance_company']) || null,
+    insurancePolicyNumber: pickString(flat, ['insurancePolicyNumber', 'policyNumber', 'insurance_policy_no']) || null,
     insuranceExpiryDate: pickDate(flat, ['insuranceExpiryDate', 'insuranceUpto', 'insurance_valid_upto', 'insuranceUptoDate']),
     fitnessExpiryDate: pickDate(flat, ['fitnessExpiryDate', 'fitnessUpto', 'fit_up_to', 'fitness_valid_upto']),
     pucExpiryDate: pickDate(flat, ['pucExpiryDate', 'puccUpto', 'pucc_upto', 'pollution_cert_valid_upto']),
+    pucNumber: pickString(flat, ['pucNumber', 'puccNumber', 'puc_no']) || null,
     taxExpiryDate: pickDate(flat, ['taxExpiryDate', 'taxPaidUpto', 'tax_upto', 'roadTaxValidUpto']),
     permitExpiryDate: pickDate(flat, ['permitExpiryDate', 'permitValidUpto', 'permit_upto']),
-    rcStatus: pickString(flat, ['rcStatus', 'status', 'rc_status', 'rcStatusDesc']) || null,
+    blacklistStatus: pickString(flat, ['blacklistStatus', 'blacklist', 'blackListStatus']) || null,
+    nocDetails: pickString(flat, ['nocDetails', 'noc', 'noc_details']) || null,
+    nonUseStatus: pickString(flat, ['nonUseStatus', 'non_use_status', 'nonUse']) || null,
   };
 }
 
@@ -119,6 +165,7 @@ function isEmptyCurrent(val: unknown): boolean {
   if (val === null || val === undefined) return true;
   if (typeof val === 'string') return val.trim() === '';
   if (typeof val === 'number') return false;
+  if (typeof val === 'boolean') return false;
   return false;
 }
 
@@ -131,38 +178,6 @@ function expiryVisual(iso: string | null): RcExpiryVisual {
   if (days < 0) return 'expired';
   if (days <= 30) return 'expiring';
   return 'valid';
-}
-
-const EXPIRY_KEYS = [
-  { key: 'insuranceExpiryDate', label: 'Insurance' },
-  { key: 'fitnessExpiryDate', label: 'Fitness' },
-  { key: 'pucExpiryDate', label: 'PUC' },
-  { key: 'taxExpiryDate', label: 'Tax' },
-  { key: 'permitExpiryDate', label: 'Permit' },
-] as const;
-
-const VEHICLE_DETAIL_KEYS = [
-  { key: 'make', label: 'Make' },
-  { key: 'model', label: 'Model' },
-  { key: 'vehicleClass', label: 'Class' },
-  { key: 'fuelType', label: 'Fuel' },
-  { key: 'color', label: 'Color' },
-  { key: 'engineNumber', label: 'Engine No' },
-  { key: 'chassisNumber', label: 'Chassis No' },
-  { key: 'year', label: 'Year' },
-  { key: 'rcNumber', label: 'RC Number' },
-] as const;
-
-const OWNER_KEYS = [
-  { key: 'ownerName', label: 'Owner Name' },
-  { key: 'fatherName', label: 'Father Name' },
-] as const;
-
-function formatDisplayValue(key: string, val: string | null): string {
-  if (!val) return '—';
-  if (key === 'year') return val;
-  if (key.endsWith('ExpiryDate')) return formatDate(val);
-  return val;
 }
 
 function coerceFuelType(raw: string): string {
@@ -178,7 +193,90 @@ function coerceFuelType(raw: string): string {
   return aliases[u] ?? u;
 }
 
-/** Build preview + PATCH payload: empty fields filled; expiries always refreshed when RC has a date */
+function fmtDateVal(key: string, val: string | null): string {
+  if (!val) return '—';
+  if (key.endsWith('ExpiryDate')) return formatDate(val);
+  if (key === 'registrationDate') return formatDateDdMmYyyy(val);
+  return val;
+}
+
+function pushFillRow(
+  rows: RcPreviewRow[],
+  patch: Record<string, unknown>,
+  key: string,
+  label: string,
+  current: Record<string, unknown>,
+  inc: string | null,
+  displayTransform?: (s: string) => string
+): void {
+  if (!inc) return;
+  const shown = displayTransform ? displayTransform(inc) : inc;
+  const cur = current[key];
+  if (PATCH_NEVER.has(key)) {
+    rows.push({
+      key,
+      label,
+      badge: isEmptyCurrent(cur) ? 'NEW' : 'KEPT',
+      value: fmtDateVal(key, shown),
+      rcHint: !isEmptyCurrent(cur) && String(cur) !== inc ? inc : undefined,
+    });
+    return;
+  }
+  if (FORCE_UPDATE_KEYS.has(key)) {
+    rows.push({
+      key,
+      label,
+      badge: 'UPD',
+      value: fmtDateVal(key, shown),
+      rcHint: !isEmptyCurrent(cur) && String(cur) !== inc ? String(cur) : undefined,
+    });
+    patch[key] = key === 'fuelType' ? coerceFuelType(inc) : inc;
+    return;
+  }
+  const empty = isEmptyCurrent(cur);
+  if (empty) {
+    rows.push({ key, label, badge: 'NEW', value: fmtDateVal(key, shown) });
+    patch[key] = key === 'fuelType' ? coerceFuelType(inc) : key === 'year' ? (parseInt(inc, 10) || inc) : inc;
+  } else {
+    rows.push({
+      key,
+      label,
+      badge: 'KEPT',
+      value: fmtDateVal(key, String(cur)),
+      rcHint: inc !== String(cur) ? fmtDateVal(key, shown) : undefined,
+    });
+  }
+}
+
+function pushForceUpdRow(
+  rows: RcPreviewRow[],
+  patch: Record<string, unknown>,
+  key: string,
+  label: string,
+  current: Record<string, unknown>,
+  displayValue: string,
+  patchValue: unknown
+): void {
+  if (!displayValue || displayValue === '—') return;
+  const cur = current[key];
+  rows.push({
+    key,
+    label,
+    badge: 'UPD',
+    value: displayValue,
+    rcHint: !isEmptyCurrent(cur) && String(cur) !== String(patchValue ?? '') ? String(cur) : undefined,
+  });
+  patch[key] = patchValue;
+}
+
+const EXPIRY_DOC: { key: string; label: string }[] = [
+  { key: 'insuranceExpiryDate', label: 'Insurance expiry' },
+  { key: 'fitnessExpiryDate', label: 'Fitness' },
+  { key: 'pucExpiryDate', label: 'PUC expiry' },
+  { key: 'taxExpiryDate', label: 'Tax' },
+  { key: 'permitExpiryDate', label: 'Permit' },
+];
+
 export function buildRcPreview(
   current: Record<string, unknown>,
   fetched: Record<string, string | null>
@@ -192,100 +290,194 @@ export function buildRcPreview(
   const sections: RcPreviewSection[] = [];
 
   const ownerRows: RcPreviewRow[] = [];
-  for (const { key, label } of OWNER_KEYS) {
-    const inc = fetched[key];
-    const cur = current[key];
-    if (!inc) continue;
-    if (DISPLAY_ONLY_KEYS.has(key)) {
-      if (isEmptyCurrent(cur)) {
-        ownerRows.push({ key, label, badge: 'NEW', value: formatDisplayValue(key, inc) });
-      } else {
-        ownerRows.push({
-          key,
-          label,
-          badge: 'KEPT',
-          value: formatDisplayValue(key, String(cur)),
-          rcHint: inc !== String(cur) ? inc : undefined,
-        });
-      }
-      continue;
-    }
-    const empty = isEmptyCurrent(cur);
+  pushFillRow(ownerRows, applyPatch, 'ownerName', 'Owner name', current, fetched.ownerName);
+  if (fetched.fatherName) {
+    pushFillRow(ownerRows, applyPatch, 'fatherName', 'Father name', current, fetched.fatherName);
+  }
+  pushFillRow(ownerRows, applyPatch, 'ownerAddress', 'Address', current, fetched.ownerAddress);
+  if (fetched.ownerNumber) {
+    const ord = formatOwnerSerialDisplay(fetched.ownerNumber) ?? fetched.ownerNumber;
+    const curOrd = formatOwnerSerialDisplay(current.ownerNumber) ?? (current.ownerNumber != null ? String(current.ownerNumber) : '');
+    const empty = isEmptyCurrent(current.ownerNumber);
     if (empty) {
-      ownerRows.push({ key, label, badge: 'NEW', value: formatDisplayValue(key, inc) });
-      applyPatch[key] = inc;
+      ownerRows.push({ key: 'ownerNumber', label: 'Owner number', badge: 'NEW', value: ord });
+      const on = parseInt(fetched.ownerNumber.replace(/\D/g, ''), 10);
+      applyPatch.ownerNumber = Number.isNaN(on) ? fetched.ownerNumber : on;
     } else {
       ownerRows.push({
-        key,
-        label,
+        key: 'ownerNumber',
+        label: 'Owner number',
         badge: 'KEPT',
-        value: formatDisplayValue(key, String(cur)),
-        rcHint: inc !== String(cur) ? inc : undefined,
+        value: curOrd || String(current.ownerNumber),
+        rcHint: ord !== curOrd ? ord : undefined,
       });
     }
   }
-  if (ownerRows.length) sections.push({ id: 'owner', title: 'Owner details', rows: ownerRows });
+  if (ownerRows.length) sections.push({ id: 'owner', title: 'Owner', rows: ownerRows });
 
   const vehicleRows: RcPreviewRow[] = [];
-  for (const { key, label } of VEHICLE_DETAIL_KEYS) {
-    const inc = fetched[key];
-    if (!inc) continue;
-    const curV = current[key];
-    if (DISPLAY_ONLY_KEYS.has(key)) {
-      const emptyV = isEmptyCurrent(curV);
-      if (emptyV) {
-        vehicleRows.push({ key, label, badge: 'NEW', value: formatDisplayValue(key, inc) });
-      } else {
-        vehicleRows.push({
-          key,
-          label,
-          badge: 'KEPT',
-          value: formatDisplayValue(key, String(curV)),
-          rcHint: inc !== String(curV) ? formatDisplayValue(key, inc) : undefined,
-        });
-      }
-      continue;
-    }
-    const cur = current[key];
+  pushFillRow(vehicleRows, applyPatch, 'make', 'Make', current, fetched.make);
+  pushFillRow(vehicleRows, applyPatch, 'model', 'Model', current, fetched.model);
+  pushFillRow(vehicleRows, applyPatch, 'variant', 'Variant', current, fetched.variant);
+  pushFillRow(vehicleRows, applyPatch, 'fuelType', 'Fuel type', current, fetched.fuelType);
+  pushFillRow(vehicleRows, applyPatch, 'color', 'Color', current, fetched.color);
+  pushFillRow(vehicleRows, applyPatch, 'bodyType', 'Body type', current, fetched.bodyType);
+  if (fetched.emissionNorms) {
+    pushFillRow(vehicleRows, applyPatch, 'emissionNorms', 'Emission', current, fetched.emissionNorms, formatEmissionShort);
+  }
+  if (vehicleRows.length) sections.push({ id: 'vehicle', title: 'Vehicle', rows: vehicleRows });
+
+  const specRows: RcPreviewRow[] = [];
+  pushFillRow(specRows, applyPatch, 'engineNumber', 'Engine', current, fetched.engineNumber);
+  pushFillRow(specRows, applyPatch, 'chassisNumber', 'Chassis', current, fetched.chassisNumber);
+  if (fetched.cubicCapacityCc) {
+    pushFillRow(specRows, applyPatch, 'cubicCapacityCc', 'CC', current, fetched.cubicCapacityCc, (s) => `${s} cc`);
+  }
+  pushFillRow(specRows, applyPatch, 'numCylinders', 'Cylinders', current, fetched.numCylinders);
+  pushFillRow(specRows, applyPatch, 'seatingCapacity', 'Seats', current, fetched.seatingCapacity);
+  if (fetched.wheelbaseMm) {
+    pushFillRow(specRows, applyPatch, 'wheelbaseMm', 'Wheelbase', current, fetched.wheelbaseMm, (s) => `${s} mm`);
+  }
+  if (fetched.grossVehicleWeightKg) {
+    pushFillRow(specRows, applyPatch, 'grossVehicleWeightKg', 'GVW', current, fetched.grossVehicleWeightKg, (s) => `${s} kg`);
+  }
+  if (fetched.unladenWeightKg) {
+    pushFillRow(specRows, applyPatch, 'unladenWeightKg', 'Unladen', current, fetched.unladenWeightKg, (s) => `${s} kg`);
+  }
+  if (fetched.loadCapacityKg) {
+    pushFillRow(specRows, applyPatch, 'loadCapacityKg', 'Load capacity', current, fetched.loadCapacityKg, (s) => `${s} kg`);
+  }
+  pushFillRow(specRows, applyPatch, 'year', 'Year', current, fetched.year);
+  if (specRows.length) sections.push({ id: 'specs', title: 'Specs', rows: specRows });
+
+  const regRows: RcPreviewRow[] = [];
+  pushFillRow(regRows, applyPatch, 'rcNumber', 'RC number', current, fetched.rcNumber);
+  if (fetched.rcStatus) {
+    pushForceUpdRow(regRows, applyPatch, 'rcStatus', 'RC status', current, `${fetched.rcStatus} ●`, fetched.rcStatus);
+  }
+  pushFillRow(regRows, applyPatch, 'registrationDate', 'Reg. date', current, fetched.registrationDate);
+  pushFillRow(regRows, applyPatch, 'registeredAt', 'Registered at', current, fetched.registeredAt);
+  pushFillRow(regRows, applyPatch, 'vehicleCategory', 'Category', current, fetched.vehicleCategory);
+  if (fetched.vehicleClassDesc) {
+    pushFillRow(regRows, applyPatch, 'vehicleClassDesc', 'Class', current, fetched.vehicleClassDesc);
+  } else if (fetched.vehicleClass) {
+    pushFillRow(regRows, applyPatch, 'vehicleClass', 'Class', current, fetched.vehicleClass);
+  }
+  if (regRows.length) sections.push({ id: 'registration', title: 'Registration', rows: regRows });
+
+  const finRows: RcPreviewRow[] = [];
+  if (fetched.financerName) {
+    pushFillRow(finRows, applyPatch, 'financerName', 'Financer', current, fetched.financerName);
+  }
+  if (fetched.isFinanced) {
+    const inc = fetched.isFinanced;
+    const label = 'Financed';
+    const display = inc === 'true' ? 'Yes' : inc === 'false' ? 'No' : inc;
+    const cur = current.isFinanced;
     const empty = isEmptyCurrent(cur);
     if (empty) {
-      vehicleRows.push({ key, label, badge: 'NEW', value: formatDisplayValue(key, inc) });
-      if (key === 'fuelType') applyPatch[key] = coerceFuelType(inc);
-      else if (key === 'year') {
-        const n = parseInt(inc, 10);
-        applyPatch[key] = Number.isNaN(n) ? inc : n;
-      } else applyPatch[key] = inc;
+      finRows.push({ key: 'isFinanced', label, badge: 'NEW', value: display });
+      applyPatch.isFinanced = inc === 'true';
     } else {
-      vehicleRows.push({
-        key,
+      finRows.push({
+        key: 'isFinanced',
         label,
         badge: 'KEPT',
-        value: formatDisplayValue(key, String(cur)),
-        rcHint: inc !== String(cur) ? formatDisplayValue(key, inc) : undefined,
+        value: cur === true ? 'Yes' : cur === false ? 'No' : String(cur),
+        rcHint: display,
       });
     }
   }
-  if (vehicleRows.length) sections.push({ id: 'vehicle', title: 'Vehicle details', rows: vehicleRows });
+  if (finRows.length) sections.push({ id: 'finance', title: 'Finance', rows: finRows });
 
-  const expiryRows: RcPreviewRow[] = [];
-  for (const { key, label } of EXPIRY_KEYS) {
+  const docRows: RcPreviewRow[] = [];
+  if (fetched.insuranceCompany || fetched.insuranceExpiryDate) {
+    const parts = [fetched.insuranceCompany, fetched.insuranceExpiryDate ? formatDate(fetched.insuranceExpiryDate) : ''].filter(Boolean);
+    if (parts.length) {
+      docRows.push({
+        key: 'insuranceLine',
+        label: 'Insurance',
+        badge: 'UPD',
+        value: parts.join('  '),
+        expiryVisual: fetched.insuranceExpiryDate ? expiryVisual(fetched.insuranceExpiryDate) : undefined,
+      });
+      if (fetched.insuranceExpiryDate) applyPatch.insuranceExpiryDate = fetched.insuranceExpiryDate;
+      if (fetched.insuranceCompany) applyPatch.insuranceCompany = fetched.insuranceCompany;
+    }
+  }
+  if (fetched.insurancePolicyNumber) {
+    pushForceUpdRow(
+      docRows,
+      applyPatch,
+      'insurancePolicyNumber',
+      'Policy no.',
+      current,
+      fetched.insurancePolicyNumber,
+      fetched.insurancePolicyNumber
+    );
+  }
+  if (fetched.fitnessExpiryDate) {
+    docRows.push({
+      key: 'fitnessExpiryDate',
+      label: 'Fitness',
+      badge: 'UPD',
+      value: formatDate(fetched.fitnessExpiryDate),
+      expiryVisual: expiryVisual(fetched.fitnessExpiryDate),
+    });
+    applyPatch.fitnessExpiryDate = fetched.fitnessExpiryDate;
+  }
+  if (fetched.pucNumber || fetched.pucExpiryDate) {
+    const pucParts = [fetched.pucNumber, fetched.pucExpiryDate ? formatDate(fetched.pucExpiryDate) : ''].filter(Boolean);
+    docRows.push({
+      key: 'pucLine',
+      label: 'PUC',
+      badge: 'UPD',
+      value: pucParts.length ? pucParts.join('  ') : '—',
+      expiryVisual: fetched.pucExpiryDate ? expiryVisual(fetched.pucExpiryDate) : undefined,
+    });
+    if (fetched.pucNumber) applyPatch.pucNumber = fetched.pucNumber;
+    if (fetched.pucExpiryDate) applyPatch.pucExpiryDate = fetched.pucExpiryDate;
+  }
+  for (const { key, label } of EXPIRY_DOC) {
+    if (key === 'insuranceExpiryDate' || key === 'fitnessExpiryDate' || key === 'pucExpiryDate') continue;
     const inc = fetched[key];
     if (!inc) continue;
-    const vis = expiryVisual(inc);
-    expiryRows.push({
+    docRows.push({
       key,
       label,
       badge: 'UPD',
-      value: formatDisplayValue(key, inc),
-      expiryVisual: vis,
+      value: formatDate(inc),
+      expiryVisual: expiryVisual(inc),
     });
     applyPatch[key] = inc;
   }
-  if (expiryRows.length) sections.push({ id: 'expiry', title: 'Expiry dates (always updated)', rows: expiryRows });
+  if (docRows.length) sections.push({ id: 'documents', title: 'Documents (always updated)', rows: docRows });
+
+  const compRows: RcPreviewRow[] = [];
+  const compAny =
+    (fetched.blacklistStatus && fetched.blacklistStatus.trim() !== '') ||
+    (fetched.nocDetails && fetched.nocDetails.trim() !== '') ||
+    (fetched.nonUseStatus && fetched.nonUseStatus.trim() !== '');
+  if (compAny) {
+    const blVal = fetched.blacklistStatus?.trim()
+      ? fetched.blacklistStatus
+      : 'Not blacklisted ✅';
+    pushForceUpdRow(compRows, applyPatch, 'blacklistStatus', 'Blacklist', current, blVal, fetched.blacklistStatus?.trim() || '');
+    if (fetched.nocDetails) {
+      pushForceUpdRow(compRows, applyPatch, 'nocDetails', 'NOC', current, fetched.nocDetails, fetched.nocDetails);
+    }
+    if (fetched.nonUseStatus) {
+      pushForceUpdRow(compRows, applyPatch, 'nonUseStatus', 'Non-use', current, fetched.nonUseStatus, fetched.nonUseStatus);
+    }
+    if (compRows.length) sections.push({ id: 'compliance', title: 'Compliance', rows: compRows });
+  }
+
+  delete applyPatch.fatherName;
 
   let updateCount = 0;
   for (const k of Object.keys(applyPatch)) {
-    if (DISPLAY_ONLY_KEYS.has(k)) continue;
+    if (PATCH_NEVER.has(k)) continue;
+    if (k === 'insuranceLine' || k === 'pucLine') continue;
     updateCount += 1;
   }
 
@@ -294,12 +486,14 @@ export function buildRcPreview(
     sections,
     applyPatch,
     updateCount,
-    rcStatusLine: fetched.rcStatus?.trim() || undefined,
   };
 }
 
 export function coerceVehicleRcPatch(patch: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...patch };
+  delete out.insuranceLine;
+  delete out.pucLine;
+
   if (out.year != null) {
     const n = parseInt(String(out.year), 10);
     if (!Number.isNaN(n)) out.year = n;
@@ -308,9 +502,25 @@ export function coerceVehicleRcPatch(patch: Record<string, unknown>): Record<str
   if (typeof out.fuelType === 'string') {
     out.fuelType = coerceFuelType(out.fuelType);
   }
+  const intKeys = ['ownerNumber', 'numCylinders', 'seatingCapacity', 'wheelbaseMm', 'cubicCapacityCc'];
+  for (const k of intKeys) {
+    if (out[k] != null && out[k] !== '') {
+      const n = parseInt(String(out[k]).replace(/\D/g, ''), 10);
+      if (!Number.isNaN(n)) out[k] = n;
+    }
+  }
+  const numKeys = ['grossVehicleWeightKg', 'unladenWeightKg', 'loadCapacityKg'];
+  for (const k of numKeys) {
+    if (out[k] != null && out[k] !== '') {
+      const n = parseFloat(String(out[k]).replace(/,/g, ''));
+      if (!Number.isNaN(n)) out[k] = n;
+    }
+  }
+  if (out.isFinanced !== undefined) {
+    out.isFinanced = out.isFinanced === true || out.isFinanced === 'true' || out.isFinanced === 'Yes';
+  }
   delete out.regNumber;
   delete out.fatherName;
-  delete out.vehicleClass;
   return out;
 }
 

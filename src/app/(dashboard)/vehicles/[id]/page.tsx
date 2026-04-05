@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,6 +8,14 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatCurrency, formatDate, formatDateDdMmYyyy, formatInrTwoDecimals, formatKm, safe, safeNumber } from '@/lib/utils';
+import {
+  formatEmissionShort,
+  formatOwnerSerialDisplay,
+  hasDisplayValue,
+  parseRcStatusTone,
+  pickVehicleField,
+  vehicleClassLabel,
+} from '@/lib/vehicleDisplay';
 import { ArrowLeft, Truck, Shield, FileCheck, Car, Receipt, ScrollText } from 'lucide-react';
 import { VerifyRcForVehicleButton } from '@/components/vehicles/RcVerifyButtons';
 
@@ -32,6 +40,65 @@ function getDocStatus(expiryDate: string | null | undefined): { label: string; c
   if (daysLeft < 0) return { label: 'Expired', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' };
   if (daysLeft <= 30) return { label: `${daysLeft}d left`, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' };
   return { label: 'Valid', color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' };
+}
+
+function HeaderRcStatusBadge({ status }: { status: unknown }) {
+  const s = String(status ?? '').trim();
+  if (!s) return null;
+  const tone = parseRcStatusTone(s);
+  const dot =
+    tone === 'active' ? 'bg-emerald-500' : tone === 'inactive' ? 'bg-red-500' : tone === 'suspended' ? 'bg-amber-500' : 'bg-slate-400';
+  const pill =
+    tone === 'active'
+      ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
+      : tone === 'inactive'
+        ? 'text-red-800 bg-red-50 border-red-200'
+        : tone === 'suspended'
+          ? 'text-amber-900 bg-amber-50 border-amber-200'
+          : 'text-slate-700 bg-slate-100 border-slate-200';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border font-['Barlow_Condensed'] uppercase tracking-wide ${pill}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} aria-hidden />
+      {s.toUpperCase()}
+    </span>
+  );
+}
+
+function DetailSubsection({
+  title,
+  items,
+  footer,
+}: {
+  title: string;
+  items: { label: string; value: string }[];
+  footer?: ReactNode;
+}) {
+  if (!items.length && !footer) return null;
+  return (
+    <div className="space-y-3">
+      <h4 className="font-['Barlow_Condensed'] text-[11px] font-bold uppercase tracking-widest text-[#1A4A7A]">{title}</h4>
+      {items.length > 0 ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {items.map(({ label, value }) => (
+            <div key={label} className="rounded-lg border border-[#E0E8F0] bg-[#FAFBFC] px-3 py-2.5 min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-[#7A9AB8] font-['Barlow_Condensed'] mb-0.5">{label}</p>
+              <p className="text-sm font-medium text-[#0D2847] break-words">{value}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {footer}
+    </div>
+  );
+}
+
+function withUnit(val: unknown, unit: string): string | undefined {
+  if (!hasDisplayValue(val)) return undefined;
+  const s = String(val).trim();
+  if (s.toLowerCase().endsWith(unit.toLowerCase())) return s;
+  return `${s} ${unit}`;
 }
 
 function DocCard({ title, icon: Icon, fields }: { title: string; icon: any; fields: { label: string; value: string; isExpiry?: boolean }[] }) {
@@ -112,14 +179,115 @@ export default function VehicleDetailPage() {
   if (isLoading) return <LoadingSpinner />;
   if (!v) return <EmptyState message="Vehicle not found" />;
 
-  const info = [
-    ['Make', safe(v.make)], ['Model', safe(v.model)], ['Year', v.year != null && typeof v.year !== 'object' ? String(v.year) : '—'], ['Fuel Type', safe(v.fuelType)],
-    ['Current KM', formatKm(v.currentKm)], ['Load Capacity', Number.isFinite(safeNumber(v.loadCapacityKg, NaN)) ? `${safeNumber(v.loadCapacityKg)} kg` : '—'],
-    ['Tires', v.numTires != null && typeof v.numTires !== 'object' ? String(v.numTires) : '—'], ['Tank', Number.isFinite(safeNumber(v.tankCapacityL, NaN)) ? `${safeNumber(v.tankCapacityL)} L` : '—'],
-    ['Chassis', safe(v.chassisNumber)], ['Engine', safe(v.engineNumber)],
-    ['Color', safe(v.color)], ['Purchase Date', formatDate(v.purchaseDate)],
-    ['Owner', safe(v.ownerName)], ['RC Number', safe(v.rcNumber)],
-  ];
+  const vr = v as Record<string, unknown>;
+
+  const vehicleItems: { label: string; value: string }[] = [];
+  const push = (label: string, val: unknown, format?: (s: string) => string) => {
+    if (!hasDisplayValue(val)) return;
+    const s = format ? format(String(val)) : String(val);
+    vehicleItems.push({ label, value: s });
+  };
+
+  push('Make', pickVehicleField(vr, ['make']));
+  push('Model', pickVehicleField(vr, ['model']));
+  push('Variant', pickVehicleField(vr, ['variant', 'vehicleVariant']));
+  push('Year', pickVehicleField(vr, ['year']));
+  push('Fuel', pickVehicleField(vr, ['fuelType', 'fuel']));
+  push('Body type', pickVehicleField(vr, ['bodyType', 'vehicleBodyType']));
+  const emissionRaw = pickVehicleField(vr, ['emissionNorms', 'emissionStandard', 'norms']);
+  if (hasDisplayValue(emissionRaw)) push('Emission', emissionRaw, formatEmissionShort);
+  push('Color', pickVehicleField(vr, ['color', 'colour']));
+  push('Engine', pickVehicleField(vr, ['engineNumber', 'engineNo']));
+  push('Chassis', pickVehicleField(vr, ['chassisNumber', 'chassisNo']));
+  const cc = pickVehicleField(vr, ['cubicCapacityCc', 'cubicCapacity', 'engineDisplacement', 'vehicleCC']);
+  const ccStr = withUnit(cc, 'cc');
+  if (ccStr) vehicleItems.push({ label: 'CC', value: ccStr });
+  push('Cylinders', pickVehicleField(vr, ['numCylinders', 'cylinders', 'noOfCylinders']));
+  push('Seats', pickVehicleField(vr, ['seatingCapacity', 'seats', 'seatCap']));
+  const wb = withUnit(pickVehicleField(vr, ['wheelbaseMm', 'wheelbase']), 'mm');
+  if (wb) vehicleItems.push({ label: 'Wheelbase', value: wb });
+  const gvw = withUnit(pickVehicleField(vr, ['grossVehicleWeightKg', 'grossVehicleWeight', 'gvw']), 'kg');
+  if (gvw) vehicleItems.push({ label: 'GVW', value: gvw });
+  const ulw = withUnit(pickVehicleField(vr, ['unladenWeightKg', 'unladenWeight', 'ulw']), 'kg');
+  if (ulw) vehicleItems.push({ label: 'Unladen', value: ulw });
+  const load = withUnit(pickVehicleField(vr, ['loadCapacityKg', 'payload']), 'kg');
+  if (load) vehicleItems.push({ label: 'Load cap.', value: load });
+  if (hasDisplayValue(vr.currentKm)) vehicleItems.push({ label: 'Current KM', value: formatKm(vr.currentKm) });
+  push('Tires', pickVehicleField(vr, ['numTires', 'tires']));
+  if (Number.isFinite(safeNumber(vr.tankCapacityL, NaN)))
+    vehicleItems.push({ label: 'Tank', value: `${safeNumber(vr.tankCapacityL)} L` });
+  if (hasDisplayValue(vr.purchaseDate))
+    vehicleItems.push({
+      label: 'Purchase date',
+      value: formatDate(vr.purchaseDate as string | Date),
+    });
+
+  const regItems: { label: string; value: string }[] = [];
+  const rpush = (label: string, val: unknown, format?: (s: string) => string) => {
+    if (!hasDisplayValue(val)) return;
+    regItems.push({ label, value: format ? format(String(val)) : String(val) });
+  };
+  rpush('RC number', pickVehicleField(vr, ['rcNumber', 'regNumber']));
+  const rcSt = pickVehicleField(vr, ['rcStatus', 'rc_status']);
+  if (hasDisplayValue(rcSt)) {
+    regItems.push({
+      label: 'RC status',
+      value: `● ${String(rcSt).toUpperCase()}`,
+    });
+  }
+  const regDt = pickVehicleField(vr, ['registrationDate', 'regDate', 'dateOfRegistration']);
+  if (hasDisplayValue(regDt))
+    regItems.push({ label: 'Reg. date', value: formatDateDdMmYyyy(regDt as string | Date) });
+  rpush('RTO', pickVehicleField(vr, ['registeredAt', 'rto', 'registeredRTO', 'registrationLocation', 'rtoName']));
+  rpush('Owner', pickVehicleField(vr, ['ownerName', 'owner']));
+  rpush('Father', pickVehicleField(vr, ['fatherName', 'father_name']));
+  const ownSer = formatOwnerSerialDisplay(pickVehicleField(vr, ['ownerNumber', 'ownerSerial', 'ownerSerialNumber']));
+  if (ownSer) regItems.push({ label: 'Owner no.', value: ownSer });
+  const vclass = vehicleClassLabel(vr);
+  if (vclass) regItems.push({ label: 'Class', value: vclass });
+
+  const ownerAddr = pickVehicleField(vr, ['ownerAddress', 'address', 'registeredAddress']);
+  const regFooter =
+    hasDisplayValue(ownerAddr) ? (
+      <div className="rounded-lg border border-[#E0E8F0] bg-white px-3 py-2.5 mt-1">
+        <p className="text-[10px] uppercase tracking-wide text-[#7A9AB8] font-['Barlow_Condensed'] mb-1">Address</p>
+        <p className="text-sm text-[#0D2847] break-words whitespace-pre-wrap">{String(ownerAddr)}</p>
+      </div>
+    ) : null;
+
+  const financer = pickVehicleField(vr, ['financerName', 'financer', 'financingBank', 'hypothecation']);
+  const isFinanced =
+    vr.isFinanced === true ||
+    vr.isFinanced === 'true' ||
+    (typeof financer === 'string' && financer.trim() !== '');
+  const showFinance = isFinanced || hasDisplayValue(financer);
+
+  const bl = pickVehicleField(vr, ['blacklistStatus', 'blacklist']);
+  const noc = pickVehicleField(vr, ['nocDetails', 'noc']);
+  const nonUse = pickVehicleField(vr, ['nonUseStatus', 'nonUse']);
+  const showCompliance = hasDisplayValue(bl) || hasDisplayValue(noc) || hasDisplayValue(nonUse);
+
+  const complianceItems: { label: string; value: string }[] = [];
+  if (showCompliance) {
+    complianceItems.push({
+      label: 'Blacklist',
+      value: hasDisplayValue(bl) ? String(bl) : 'Clear ✅',
+    });
+    if (hasDisplayValue(noc)) complianceItems.push({ label: 'NOC', value: String(noc) });
+    if (hasDisplayValue(nonUse)) complianceItems.push({ label: 'Non-use', value: String(nonUse) });
+  }
+
+  const variant = pickVehicleField(vr, ['variant']);
+  const make = pickVehicleField(vr, ['make']);
+  const model = pickVehicleField(vr, ['model']);
+  const yearStr =
+    vr.year != null && typeof vr.year !== 'object' ? String(vr.year) : '';
+  const subtitleCore = [make, model, variant].filter(Boolean).join(' ');
+  const subtitle = subtitleCore ? (yearStr ? `${subtitleCore} · ${yearStr}` : subtitleCore) : yearStr;
+
+  const hasVehicleBlock = vehicleItems.length > 0;
+  const hasRegBlock = regItems.length > 0 || !!regFooter;
+  const showInfoCard = hasVehicleBlock || hasRegBlock || showFinance || showCompliance;
 
   return (
     <div className="space-y-5">
@@ -136,25 +304,44 @@ export default function VehicleDetailPage() {
                 onApplied={() => void qc.invalidateQueries({ queryKey: ['vehicle', id] })}
               />
             </div>
-            <p className="text-sm text-[#7A9AB8]">
-              {safe(v.make)} {safe(v.model)} • {v.year != null && typeof v.year !== 'object' ? String(v.year) : '—'}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {subtitle ? <p className="text-sm text-[#7A9AB8]">{subtitle}</p> : null}
+              <HeaderRcStatusBadge status={pickVehicleField(vr, ['rcStatus', 'rc_status'])} />
+            </div>
           </div>
         </div>
         <StatusBadge status={v.status} size="md" />
       </div>
 
-      <div className="bg-white border border-[#E0E8F0] rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-[#1A4A7A] font-['Barlow_Condensed'] uppercase tracking-wider mb-4">Vehicle Information</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {info.map(([k, val]) => (
-            <div key={k}>
-              <p className="text-xs text-[#7A9AB8] mb-1">{k}</p>
-              <p className="text-sm font-medium text-[#0D2847]">{val}</p>
+      {showInfoCard ? (
+        <div className="bg-white border border-[#E0E8F0] rounded-xl p-5 space-y-8">
+          <h3 className="text-sm font-semibold text-[#1A4A7A] font-['Barlow_Condensed'] uppercase tracking-wider">
+            Vehicle information
+          </h3>
+          <DetailSubsection title="Vehicle" items={vehicleItems} />
+          <DetailSubsection title="Registration & owner" items={regItems} footer={regFooter} />
+          {showFinance ? (
+            <div className="space-y-3">
+              <h4 className="font-['Barlow_Condensed'] text-[11px] font-bold uppercase tracking-widest text-[#1A4A7A]">Finance</h4>
+              <div className="rounded-xl border border-[#E0E8F0] bg-[#FAFBFC] px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#0D2847]">
+                {hasDisplayValue(financer) ? (
+                  <span>
+                    <span className="text-[#7A9AB8] font-['Barlow_Condensed'] text-xs uppercase mr-1">Financer</span>
+                    {String(financer)}
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center gap-2 text-[#7A9AB8] font-['Barlow_Condensed'] text-xs uppercase">
+                  Status:
+                  <span className="text-amber-900 font-semibold normal-case font-['Rajdhani'] text-sm" title="Under finance">
+                    🔒
+                  </span>
+                </span>
+              </div>
             </div>
-          ))}
+          ) : null}
+          {showCompliance ? <DetailSubsection title="Compliance" items={complianceItems} /> : null}
         </div>
-      </div>
+      ) : null}
 
       <div className="bg-white border border-[#E0E8F0] rounded-xl overflow-hidden">
         <div className="flex border-b border-[#E0E8F0] overflow-x-auto">

@@ -71,17 +71,10 @@ export function RcVerificationPreviewModal({
           </div>
         ))}
 
-        {preview.rcStatusLine ? (
-          <div className="rounded-lg bg-[#F4F6F8] border border-[#E0E8F0] px-4 py-3 text-sm">
-            <span className="text-[#7A9AB8]">RC status: </span>
-            <span className="font-semibold text-[#0D2847]">{preview.rcStatusLine}</span>
-          </div>
-        ) : null}
-
         <div className="text-xs text-[#7A9AB8] space-y-1 font-['Rajdhani'] border-t border-[#E0E8F0] pt-4">
           <p>
-            <Badge kind="NEW" /> will fill empty fields · <Badge kind="KEPT" /> keeps your existing values ·{' '}
-            <Badge kind="UPD" /> refreshes expiry dates from RC
+            <Badge kind="NEW" /> fills empty fields · <Badge kind="KEPT" /> keeps your saved values ·{' '}
+            <Badge kind="UPD" /> refreshes dates, RC status, documents &amp; compliance from RC
           </p>
           <p className="font-semibold text-[#0D2847]">
             {preview.updateCount} field{preview.updateCount !== 1 ? 's' : ''} will be updated
