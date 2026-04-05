@@ -4,12 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Truck, Snowflake, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-const demoAccounts = [
-  { role: 'Super Admin', email: 'admin@transporto.in', password: 'admin123', icon: '👨‍💼' },
-  { role: 'Manager', email: 'priya@transporto.in', password: 'admin123', icon: '👩‍💼' },
-  { role: 'Driver', email: 'rajesh@transporto.in', password: 'driver123', icon: '🚛' },
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
@@ -31,12 +25,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = (account: typeof demoAccounts[0]) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
   };
 
   return (
@@ -123,7 +111,8 @@ export default function LoginPage() {
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
                 className="w-full h-12 px-4 rounded-lg border border-[#E0E8F0] text-[#0D2847] placeholder:text-[#7A9AB8] focus:outline-none focus:ring-2 focus:ring-[#42A5F5]/20 focus:border-[#42A5F5] transition-shadow font-['Rajdhani']"
                 placeholder="you@company.com"
                 required
@@ -135,7 +124,8 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full h-12 px-4 pr-12 rounded-lg border border-[#E0E8F0] text-[#0D2847] placeholder:text-[#7A9AB8] focus:outline-none focus:ring-2 focus:ring-[#42A5F5]/20 focus:border-[#42A5F5] transition-shadow font-['Rajdhani']"
                   placeholder="••••••••"
                   required
@@ -153,25 +143,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-8">
-            <p className="font-['Barlow_Condensed'] text-xs font-semibold uppercase tracking-wider text-[#7A9AB8] mb-3">Demo Accounts</p>
-            <div className="space-y-2">
-              {demoAccounts.map(account => (
-                <button
-                  key={account.email}
-                  onClick={() => fillDemo(account)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg border border-[#E0E8F0] hover:border-[#42A5F5] hover:bg-[#42A5F5]/5 transition-all text-left group font-['Rajdhani']"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{account.icon}</span>
-                    <span className="text-sm font-medium text-[#0D2847] group-hover:text-[#1565C0]">{account.role}</span>
-                  </div>
-                  <span className="text-xs text-[#7A9AB8] font-mono">{account.email}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

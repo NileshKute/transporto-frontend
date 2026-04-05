@@ -68,6 +68,7 @@ const navGroups = [
 const adminNavGroup = {
   label: 'ADMIN',
   items: [
+    { href: '/admin/users', icon: Users, label: 'User Management' },
     { href: '/admin/permissions', icon: Settings, label: 'Permissions' },
     { href: '/admin/maintenance-types', icon: Wrench, label: 'Maintenance Types' },
   ],
@@ -93,6 +94,7 @@ function getPageTitle(pathname: string | null) {
     '/bpcl/cards': 'Card Management',
     '/maintenance': 'Vehicle Maintenance',
     '/admin/maintenance-types': 'Maintenance Types',
+    '/admin/users': 'User Management',
     '/emergencies': 'Emergencies',
     '/insurance': 'Insurance',
     '/cold-storage': 'Cold Storage',
@@ -184,6 +186,10 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
   }
   if (p.startsWith('/salary')) {
     items.push({ label: 'Salary', href: '/salary' });
+    return items;
+  }
+  if (p.startsWith('/admin/users')) {
+    items.push({ label: 'User Management', href: '/admin/users' });
     return items;
   }
   if (p.startsWith('/admin/permissions')) {
