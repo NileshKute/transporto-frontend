@@ -199,7 +199,7 @@ export default function VehicleDetailPage() {
   push('Color', pickVehicleField(vr, ['color', 'colour']));
   push('Engine', pickVehicleField(vr, ['engineNumber', 'engineNo']));
   push('Chassis', pickVehicleField(vr, ['chassisNumber', 'chassisNo']));
-  const cc = pickVehicleField(vr, ['cubicCapacityCc', 'cubicCapacity', 'engineDisplacement', 'vehicleCC']);
+  const cc = pickVehicleField(vr, ['cubicCapacity', 'engineDisplacement', 'vehicleCC']);
   const ccStr = withUnit(cc, 'cc');
   if (ccStr) vehicleItems.push({ label: 'CC', value: ccStr });
   push('Cylinders', pickVehicleField(vr, ['numCylinders', 'cylinders', 'noOfCylinders']));

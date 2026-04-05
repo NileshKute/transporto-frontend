@@ -133,7 +133,7 @@ export function extractRcDataFromResponse(raw: unknown): Record<string, string |
     emissionNorms: pickString(flat, ['emissionNorms', 'norms', 'emission_norms', 'standards', 'emissionStandard']) || null,
     engineNumber: pickString(flat, ['engineNumber', 'engineNo', 'engine_no']) || null,
     chassisNumber: pickString(flat, ['chassisNumber', 'chassisNo', 'chassis_no']) || null,
-    cubicCapacityCc: pickString(flat, ['cubicCapacityCc', 'cubicCapacity', 'engineDisplacement', 'vehicleCC', 'cc', 'engineCC']) || null,
+    cubicCapacity: pickString(flat, ['cubicCapacity', 'engineDisplacement', 'vehicleCC', 'cc', 'engineCC']) || null,
     numCylinders: pickString(flat, ['numCylinders', 'cylinders', 'noOfCylinders', 'no_of_cylinder']) || null,
     seatingCapacity: pickString(flat, ['seatingCapacity', 'seats', 'seatCap', 'noOfSeats']) || null,
     wheelbaseMm: pickString(flat, ['wheelbaseMm', 'wheelbase', 'wheel_base']) || null,
@@ -330,8 +330,8 @@ export function buildRcPreview(
   const specRows: RcPreviewRow[] = [];
   pushFillRow(specRows, applyPatch, 'engineNumber', 'Engine', current, fetched.engineNumber);
   pushFillRow(specRows, applyPatch, 'chassisNumber', 'Chassis', current, fetched.chassisNumber);
-  if (fetched.cubicCapacityCc) {
-    pushFillRow(specRows, applyPatch, 'cubicCapacityCc', 'CC', current, fetched.cubicCapacityCc, (s) => `${s} cc`);
+  if (fetched.cubicCapacity) {
+    pushFillRow(specRows, applyPatch, 'cubicCapacity', 'CC', current, fetched.cubicCapacity, (s) => `${s} cc`);
   }
   pushFillRow(specRows, applyPatch, 'numCylinders', 'Cylinders', current, fetched.numCylinders);
   pushFillRow(specRows, applyPatch, 'seatingCapacity', 'Seats', current, fetched.seatingCapacity);
@@ -502,7 +502,7 @@ export function coerceVehicleRcPatch(patch: Record<string, unknown>): Record<str
   if (typeof out.fuelType === 'string') {
     out.fuelType = coerceFuelType(out.fuelType);
   }
-  const intKeys = ['ownerNumber', 'numCylinders', 'seatingCapacity', 'wheelbaseMm', 'cubicCapacityCc'];
+  const intKeys = ['ownerNumber', 'numCylinders', 'seatingCapacity', 'wheelbaseMm', 'cubicCapacity'];
   for (const k of intKeys) {
     if (out[k] != null && out[k] !== '') {
       const n = parseInt(String(out[k]).replace(/\D/g, ''), 10);
