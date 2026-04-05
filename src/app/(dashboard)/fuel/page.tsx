@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate, safe, safeNumber } from '@/lib/utils';
 import { Fuel, Plus, TrendingUp, Droplets, DollarSign, Gauge } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { driverSelectLabel } from '@/lib/driverLabel';
 
 const PAYMENT_MODES = ['CASH','UPI','CARD','CREDIT','COMPANY_ACCOUNT'];
 const FUEL_TYPES = ['DIESEL','PETROL','CNG','ELECTRIC','HYBRID'];
@@ -113,7 +114,7 @@ export default function FuelPage() {
                 <option value="">Select Driver</option>
                 {drivers?.map((d: any) => (
                   <option key={d.id} value={d.id}>
-                    {safe(d.name)}
+                    {driverSelectLabel(d)}
                   </option>
                 ))}
               </select>

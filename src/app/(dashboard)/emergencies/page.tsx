@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatDate, formatDateTime, safe } from '@/lib/utils';
 import { AlertTriangle, MapPin, Plus, CheckCircle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { driverSelectLabel } from '@/lib/driverLabel';
 
 const E_TYPES = ['PUNCTURE','ACCIDENT','BREAKDOWN','ENGINE_FAILURE','FUEL_EMPTY','ELECTRICAL_FAILURE','BRAKE_FAILURE','FIRE','THEFT','OTHER'];
 const E_STATUSES = ['PENDING','ACKNOWLEDGED','IN_PROGRESS','RESOLVED','CLOSED'];
@@ -126,7 +127,11 @@ export default function EmergenciesPage() {
               <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')}>
                 <option value="">Select Driver</option>
-                {drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {drivers?.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {driverSelectLabel(d)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

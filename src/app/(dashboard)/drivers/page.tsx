@@ -13,6 +13,7 @@ import { displayText } from '@/lib/displayText';
 import { Plus, Eye, Pencil, Trash2, Search, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { driverListLabel } from '@/lib/driverLabel';
 
 const STATUSES = ['AVAILABLE','ON_TRIP','ON_LEAVE','OFF_DUTY','TERMINATED'];
 
@@ -86,7 +87,7 @@ export default function DriversPage() {
 
   const openEdit = (d: any) => {
     const safe: any = {};
-    const textFields = ['name','phone','licenseNumber','licenseType','experience','salary','bloodGroup','city','state','emergencyContact','emergencyName','status','licenseExpiry','baseSalary','employeeCode'];
+    const textFields = ['name','nickname','phone','licenseNumber','licenseType','experience','salary','bloodGroup','city','state','emergencyContact','emergencyName','status','licenseExpiry','baseSalary','employeeCode'];
     for (const key of textFields) {
       safe[key] = d[key] != null ? String(d[key]) : '';
     }
@@ -145,7 +146,7 @@ export default function DriversPage() {
                           {safeStr(d.name, '?')[0]}
                         </div>
                         <div>
-                          <p className="font-medium text-[#0D2847] text-sm">{safeStr(d.name)}</p>
+                          <p className="font-medium text-[#0D2847] text-sm">{driverListLabel(d)}</p>
                           <p className="text-xs text-[#1A4A7A]">{safeStr(d.city)}</p>
                         </div>
                       </div>
@@ -180,10 +181,15 @@ export default function DriversPage() {
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditDriver(null); }} title={editDriver ? 'Edit Driver' : 'Add Driver'} size="lg">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {[['name','Name *'],['phone','Phone *'],['licenseNumber','License Number *'],['licenseType','License Type'],['experience','Experience (years)'],['salary','Salary (₹)'],['bloodGroup','Blood Group'],['city','City'],['state','State'],['emergencyContact','Emergency Contact'],['emergencyName','Emergency Contact Name']].map(([n, l]) => (
+            {[['name','Name *'],['nickname','Nickname / Short Name'],['phone','Phone *'],['licenseNumber','License Number *'],['licenseType','License Type'],['experience','Experience (years)'],['salary','Salary (₹)'],['bloodGroup','Blood Group'],['city','City'],['state','State'],['emergencyContact','Emergency Contact'],['emergencyName','Emergency Contact Name']].map(([n, l]) => (
               <div key={n}>
                 <label className="block text-xs font-medium text-[#475569] mb-1.5">{l}</label>
-                <input value={typeof form[n] === 'object' ? '' : (form[n] ?? '')} onChange={f(n)} className="border border-[#cbd5e1] rounded-lg" />
+                <input
+                  value={typeof form[n] === 'object' ? '' : (form[n] ?? '')}
+                  onChange={f(n)}
+                  placeholder={n === 'nickname' ? 'e.g., Shani, Raj' : undefined}
+                  className="border border-[#cbd5e1] rounded-lg"
+                />
               </div>
             ))}
             <div>

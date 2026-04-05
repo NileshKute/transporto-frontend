@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatDate, formatDateTime, safe, safeNumber } from '@/lib/utils';
 import { Plus, Play, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { driverListLabel, driverSelectLabel } from '@/lib/driverLabel';
 
 export default function ShiftsPage() {
   const qc = useQueryClient();
@@ -84,7 +85,13 @@ export default function ShiftsPage() {
               <tbody className="divide-y divide-[#E0E8F0]">
                 {data.data.map((s: any) => (
                   <tr key={String(s.id ?? '')} className={`hover:bg-[#F4F6F8] transition-colors ${safeNumber(s.overtime, 0) > 0 ? 'border-l-4 border-l-[#F59E0B] bg-[#F59E0B]/10' : ''}`}>
-                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">{typeof s.driver?.name === 'string' ? s.driver.name : safe(s.driver)}</td>
+                    <td className="px-4 py-3.5 font-medium text-[#0D2847]">
+                      {s.driver != null && typeof s.driver === 'object'
+                        ? driverListLabel(s.driver as { name?: string; nickname?: string | null })
+                        : typeof s.driver?.name === 'string'
+                          ? s.driver.name
+                          : safe(s.driver)}
+                    </td>
                     <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{typeof s.vehicle?.regNumber === 'string' ? s.vehicle.regNumber : safe(s.vehicle?.regNumber)}</td>
                     <td className="px-4 py-3.5 text-sm text-[#1A4A7A]">{formatDate(s.date)}</td>
                     <td className="px-4 py-3.5 text-xs text-[#1A4A7A]">{formatDateTime(s.startTime)}</td>
@@ -132,7 +139,11 @@ export default function ShiftsPage() {
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Driver *</label>
               <select value={form.driverId || ''} onChange={f('driverId')}>
                 <option value="">Select Driver</option>
-                {drivers?.map((d: any) => <option key={String(d.id ?? '')} value={d.id}>{typeof d.name === 'string' ? d.name : safe(d.name)}</option>)}
+                {drivers?.map((d: any) => (
+                  <option key={String(d.id ?? '')} value={d.id}>
+                    {driverSelectLabel(d)}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

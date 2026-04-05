@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, ClipboardList,
+  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin,
 } from 'lucide-react';
 
 const navGroups = [
@@ -22,7 +22,6 @@ const navGroups = [
       { href: '/gps', icon: MapPin, label: 'GPS Tracking' },
       { href: '/drivers', icon: Users, label: 'Drivers' },
       { href: '/trips', icon: Route, label: 'Trips' },
-      { href: '/trips/daily-log', icon: ClipboardList, label: 'Daily Trip Log' },
       { href: '/fuel', icon: Fuel, label: 'Fuel' },
     ]
   },
@@ -76,7 +75,6 @@ const adminNavGroup = {
 
 function getPageTitle(pathname: string | null) {
   const p = pathname ?? '';
-  if (p === '/trips/daily-log') return 'Daily Trip Log';
   if (p.startsWith('/clients')) return p === '/clients' ? 'Clients' : 'Client';
   if (p.startsWith('/invoices')) {
     if (p === '/invoices') return 'Invoices';
@@ -140,7 +138,6 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
   }
   if (p.startsWith('/trips')) {
     items.push({ label: 'Trips', href: '/trips' });
-    if (p === '/trips/daily-log') items.push({ label: 'Daily Trip Log' });
     return items;
   }
   if (p.startsWith('/fuel')) {

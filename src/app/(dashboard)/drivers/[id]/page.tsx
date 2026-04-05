@@ -68,6 +68,9 @@ export default function DriverDetailPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-[#0D2847]">{safeStr(d.name)}</h2>
+            {d.nickname ? (
+              <p className="text-sm font-semibold text-[#1565C0] font-['Rajdhani'] mt-0.5">{safeStr(d.nickname)}</p>
+            ) : null}
             <div className="flex items-center gap-2 mt-0.5">
               <Phone className="w-3 h-3 text-[#7A9AB8]" />
               <span className="text-sm text-[#7A9AB8] font-mono">{safeStr(d.phone)}</span>
@@ -87,6 +90,7 @@ export default function DriverDetailPage() {
           <h3 className="text-sm font-semibold text-[#1A4A7A] font-['Barlow_Condensed'] uppercase tracking-wider mb-4">Driver Information</h3>
           <div className="grid grid-cols-2 gap-4">
             {([
+              ['Nickname / Short Name', d.nickname ? safeStr(d.nickname) : '—'],
               ['License Number', safeStr(d.licenseNumber)],
               ['License Type', safeStr(d.licenseType)],
               ['License Expiry', formatDate(d.licenseExpiry)],

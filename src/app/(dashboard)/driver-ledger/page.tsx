@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePermission } from '@/hooks/usePermission';
+import { driverListLabel, driverSelectLabel } from '@/lib/driverLabel';
 
 const MONTHS = [
   { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -101,15 +102,17 @@ export default function DriverLedgerPage() {
     },
   });
 
-  const driverOpts = useMemo(() =>
-    (Array.isArray(driversRaw) ? driversRaw : []).map((d: any) => ({
-      id: String(d.id),
-      name: `${String(d.name || 'Driver')}${d.employeeCode ? ` (${String(d.employeeCode)})` : ''}`,
-      rawName: String(d.name || 'Driver'),
-    })),
-  [driversRaw]);
+  const driverOpts = useMemo(
+    () =>
+      (Array.isArray(driversRaw) ? driversRaw : []).map((d: any) => ({
+        id: String(d.id),
+        name: `${driverSelectLabel(d)}${d.employeeCode ? ` (${String(d.employeeCode)})` : ''}`,
+        rawName: driverListLabel(d),
+      })),
+    [driversRaw],
+  );
 
-  const selectedDriverName = driverOpts.find(d => d.id === selectedDriver)?.rawName || 'Driver';
+  const selectedDriverName = driverOpts.find((d) => d.id === selectedDriver)?.rawName || 'Driver';
 
   const getQueryParams = () => {
     const params: Record<string, string> = {};

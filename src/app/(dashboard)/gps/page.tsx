@@ -102,8 +102,26 @@ export default function GpsLivePage() {
 
   const fetchLiveData = useCallback(async () => {
     try {
-      const res = await api.get<{ vehicles?: GpsVehicle[] }>('/gps/live');
-      setVehicles(res.data.vehicles ?? []);
+      const res = await api.get<{ vehicles?: Record<string, unknown>[] }>('/gps/live');
+      const raw = res.data.vehicles ?? [];
+      const mapped: GpsVehicle[] = raw.map((row) => {
+        const v = row.vehicle as Record<string, unknown> | undefined;
+        const assignments = v?.assignments as Record<string, unknown>[] | undefined;
+        const first = assignments?.[0];
+        const drv = first?.driver as Record<string, unknown> | undefined;
+        const assignedDriverName =
+          drv?.name != null && String(drv.name).trim() ? String(drv.name) : undefined;
+        const assignedDriverNickname =
+          drv?.nickname != null && String(drv.nickname).trim()
+            ? String(drv.nickname)
+            : undefined;
+        return {
+          ...(row as GpsVehicle),
+          assignedDriverName,
+          assignedDriverNickname,
+        };
+      });
+      setVehicles(mapped);
       setLastFetched(new Date().toLocaleTimeString('en-IN'));
       setError(null);
     } catch (err: unknown) {
@@ -173,7 +191,9 @@ export default function GpsLivePage() {
     return mergedVehicles.filter((v) => {
       const reg = (v.regNumber || v.registrationNumber || '').toLowerCase();
       const loc = (v.location || '').toLowerCase();
-      return reg.includes(s) || loc.includes(s);
+      const dn = (v.assignedDriverName || '').toLowerCase();
+      const nick = (v.assignedDriverNickname || '').toLowerCase();
+      return reg.includes(s) || loc.includes(s) || dn.includes(s) || nick.includes(s);
     });
   }, [mergedVehicles, searchTerm]);
 
@@ -481,6 +501,15 @@ export default function GpsLivePage() {
                       </span>
                     </div>
 
+                    {(v.assignedDriverNickname || v.assignedDriverName) && (
+                      <p className="text-xs text-[#1A4A7A] font-['Rajdhani'] mb-1 truncate">
+                        {v.assignedDriverNickname
+                          ? `${v.assignedDriverNickname}${
+                              v.assignedDriverName ? ` (${v.assignedDriverName})` : ''
+                            }`
+                          : v.assignedDriverName}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 text-xs text-gray-500 font-['Rajdhani']">
                       <span>{Math.round(Number(v.speed) || 0)} km/h</span>
                       {v.temperature != null && (

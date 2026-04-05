@@ -14,7 +14,7 @@ import { VerifyRcForVehicleButton, VerifyRcAutofillButton } from '@/components/v
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
-const VEHICLE_TYPES = ['TRUCK','MINI_TRUCK','TRAILER','REEFER_TRUCK','TANKER','PICKUP','VAN','TEMPO','CONTAINER'];
+const VEHICLE_TYPES = ['TRUCK','MINI_TRUCK','TRAILER','REEFER_TRUCK','REEFER_PICKUP','TANKER','PICKUP','VAN','TEMPO','CONTAINER'];
 const FUEL_TYPES = ['DIESEL','PETROL','CNG','ELECTRIC','HYBRID'];
 const STATUSES = ['ACTIVE','IN_MAINTENANCE','IDLE','BREAKDOWN','SOLD','DECOMMISSIONED'];
 

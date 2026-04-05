@@ -28,4 +28,7 @@ export interface GpsVehicle {
   ignitionOn?: boolean;
   doorOpen?: boolean;
   lastUpdated?: string;
+  /** From assigned driver (current assignment) when API includes vehicle.assignments */
+  assignedDriverName?: string;
+  assignedDriverNickname?: string;
 }
