@@ -13,5 +13,18 @@ export const quotationsApi = {
   delete: (id: string) => api.delete(`/quotations/${id}`),
   downloadPdf: (id: string) => api.get(`/quotations/${id}/pdf`, { responseType: 'blob' }),
   getStats: () => api.get('/quotations/stats'),
-  import: (data: unknown) => api.post('/quotations/import', data),
+  /** Sends JSON as multipart `file` (Blob) for backends that expect multipart upload. */
+  import: async (jsonData: unknown) => {
+    const jsonString = JSON.stringify(jsonData);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const formData = new FormData();
+    formData.append('file', blob, 'quotations_import.json');
+    return api.post('/quotations/import', formData);
+  },
+  /** Sends the user-selected file as multipart `file` (raw upload, no client-side parse). */
+  importFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/quotations/import', formData);
+  },
 };
