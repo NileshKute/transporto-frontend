@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin,
+  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, ScrollText,
 } from 'lucide-react';
 
 const navGroups = [
@@ -50,10 +50,11 @@ const navGroups = [
     ]
   },
   {
-    label: 'BILLING',
+    label: 'SALES',
     items: [
       { href: '/clients', icon: Building2, label: 'Clients' },
       { href: '/invoices', icon: FileText, label: 'Invoices' },
+      { href: '/quotations', icon: ScrollText, label: 'Quotations' },
     ]
   },
   {
@@ -83,6 +84,13 @@ function getPageTitle(pathname: string | null) {
     if (p.endsWith('/edit')) return 'Edit Invoice';
     return 'Invoice';
   }
+  if (p.startsWith('/quotations')) {
+    if (p === '/quotations') return 'Quotations';
+    if (p === '/quotations/new') return 'New Quotation';
+    if (p === '/quotations/import') return 'Import Quotations';
+    if (p.endsWith('/edit')) return 'Edit Quotation';
+    return 'Quotation';
+  }
   const map: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/vehicles': 'Vehicles',
@@ -103,6 +111,9 @@ function getPageTitle(pathname: string | null) {
     '/driver-ledger': 'Driver Ledger',
     '/salary': 'Salary',
     '/admin/permissions': 'Permissions',
+    '/quotations': 'Quotations',
+    '/quotations/new': 'New Quotation',
+    '/quotations/import': 'Import Quotations',
   };
   return map[p] || 'Dashboard';
 }
@@ -122,6 +133,14 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
     if (p === '/invoices/create') items.push({ label: 'Create' });
     else if (p.endsWith('/edit')) items.push({ label: 'Edit' });
     else if (p !== '/invoices') items.push({ label: 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/quotations')) {
+    items.push({ label: 'Quotations', href: '/quotations' });
+    if (p === '/quotations/new') items.push({ label: 'New' });
+    else if (p === '/quotations/import') items.push({ label: 'Import' });
+    else if (p.endsWith('/edit')) items.push({ label: 'Edit' });
+    else if (p !== '/quotations') items.push({ label: 'Detail' });
     return items;
   }
   if (p.startsWith('/vehicles')) {
@@ -296,7 +315,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{group.label}</p>
               <div className="space-y-1">
                 {group.items.map(item => {
-                  const isActive = (pathname ?? '') === item.href;
+                  const path = pathname ?? '';
+                  const isActive =
+                    item.href === '/dashboard'
+                      ? path === '/dashboard'
+                      : path === item.href || path.startsWith(`${item.href}/`);
                   return (
                     <Link
                       key={item.href}
@@ -321,7 +344,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{adminNavGroup.label}</p>
               <div className="space-y-1">
                 {adminNavGroup.items.map(item => {
-                  const isActive = (pathname ?? '') === item.href;
+                  const path = pathname ?? '';
+                  const isActive = path === item.href || path.startsWith(`${item.href}/`);
                   return (
                     <Link
                       key={item.href}

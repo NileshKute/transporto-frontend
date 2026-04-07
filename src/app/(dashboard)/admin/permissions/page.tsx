@@ -24,6 +24,7 @@ const MODULE_LABELS: Record<string, string> = {
   whatsapp: 'WhatsApp',
   clients: 'Clients',
   invoices: 'Invoices',
+  quotations: 'Quotations',
   'driver-ledger': 'Driver Ledger',
   salary: 'Salary',
   users: 'Users',
