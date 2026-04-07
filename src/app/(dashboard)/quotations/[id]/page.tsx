@@ -8,6 +8,7 @@ import { quotationsApi } from '@/lib/api/quotations';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatIndianCurrency, formatDate } from '@/lib/utils';
+import { format } from 'date-fns';
 import { displayText, toArray } from '@/lib/displayText';
 import { pickQuotationPayload, readStringArray } from '@/lib/quotations/normalize';
 import { QUOTATION_STATUSES, STATUS_BADGE_CLASSES, VEHICLE_QUOTE_TYPE_OPTIONS } from '@/lib/quotations/constants';
@@ -342,7 +343,15 @@ export default function QuotationDetailPage() {
               </div>
               <div>
                 <dt className="text-[#7A9AB8] text-xs uppercase font-['Barlow_Condensed']">Quote date</dt>
-                <dd>{q.quoteDate || q.quote_date ? formatDate(String(q.quoteDate ?? q.quote_date)) : '—'}</dd>
+                <dd>
+                  {q.quoteDate || q.quote_date
+                    ? (() => {
+                        const raw = String(q.quoteDate ?? q.quote_date);
+                        const d = new Date(raw);
+                        return Number.isNaN(d.getTime()) ? '—' : format(d, 'd/M/yyyy');
+                      })()
+                    : '—'}
+                </dd>
               </div>
               <div>
                 <dt className="text-[#7A9AB8] text-xs uppercase font-['Barlow_Condensed']">Valid until</dt>

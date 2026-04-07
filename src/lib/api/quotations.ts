@@ -27,4 +27,5 @@ export const quotationsApi = {
     formData.append('file', file);
     return api.post('/quotations/import', formData);
   },
+  reparseHistorical: () => api.post('/quotations/admin/reparse-historical'),
 };

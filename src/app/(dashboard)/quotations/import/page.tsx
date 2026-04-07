@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { quotationsApi } from '@/lib/api/quotations';
 import { displayText, toArray } from '@/lib/displayText';
@@ -46,12 +47,31 @@ function parseImportResponse(res: { data?: unknown }): {
   return { imported, skipped, total, errors, summaryRows };
 }
 
+type ReparseResult = {
+  totalScanned: number;
+  rateUpdated: number;
+  clientLinked: number;
+};
+
+function unpackReparsePayload(raw: unknown): ReparseResult | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const inner = r.data !== undefined && typeof r.data === 'object' ? (r.data as Record<string, unknown>) : r;
+  const totalScanned = Number(inner.totalScanned ?? inner.total_scanned ?? 0) || 0;
+  const rateUpdated = Number(inner.rateUpdated ?? inner.rate_updated ?? 0) || 0;
+  const clientLinked = Number(inner.clientLinked ?? inner.client_linked ?? 0) || 0;
+  return { totalScanned, rateUpdated, clientLinked };
+}
+
 export default function QuotationImportPage() {
   const { user, isLoading } = useAuth();
+  const qc = useQueryClient();
   const [fileName, setFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jsonText, setJsonText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reparsing, setReparsing] = useState(false);
+  const [reparseResult, setReparseResult] = useState<ReparseResult | null>(null);
   const [result, setResult] = useState<{
     imported: number;
     skipped: number;
@@ -119,6 +139,23 @@ export default function QuotationImportPage() {
   };
 
   const canSubmit = !!(selectedFile || jsonText.trim());
+
+  const handleReparse = async () => {
+    setReparsing(true);
+    setReparseResult(null);
+    try {
+      const response = await quotationsApi.reparseHistorical();
+      const unpacked = unpackReparsePayload(response.data);
+      if (unpacked) setReparseResult(unpacked);
+      qc.invalidateQueries({ queryKey: ['quotations-list'] });
+      qc.invalidateQueries({ queryKey: ['quotations-stats'] });
+      toast.success('Historical data re-parsed successfully');
+    } catch {
+      toast.error('Failed to re-parse historical data');
+    } finally {
+      setReparsing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -190,6 +227,43 @@ export default function QuotationImportPage() {
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           Import historical quotations
         </button>
+      </div>
+
+      <div className="mt-8 p-6 rounded-xl border border-[#42A5F5]/40 bg-[#42A5F5]/10">
+        <h3 className="font-['Oswald'] text-lg font-bold text-[#0D2847] mb-2">Fix imported data</h3>
+        <p className="font-['Rajdhani'] text-sm text-[#1A4A7A] mb-4">
+          Re-extract missing monthly rates and link clients for historical quotations imported from Word files. Safe to run multiple
+          times; only empty rate and client fields are filled from stored raw text.
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleReparse()}
+          disabled={reparsing}
+          className="bg-[#1565C0] hover:bg-[#0D2847] text-white font-['Barlow_Condensed'] font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {reparsing ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Re-parsing…
+            </span>
+          ) : (
+            'Re-parse historical data'
+          )}
+        </button>
+        {reparseResult && (
+          <div className="mt-4 p-4 rounded-lg border border-[#16A34A]/30 bg-[#16A34A]/10">
+            <p className="font-['Rajdhani'] text-sm text-[#0D2847] space-y-1">
+              <span className="block">
+                Scanned: <strong>{reparseResult.totalScanned}</strong>
+              </span>
+              <span className="block">
+                Rates updated: <strong>{reparseResult.rateUpdated}</strong>
+              </span>
+              <span className="block">
+                Clients linked: <strong>{reparseResult.clientLinked}</strong>
+              </span>
+            </p>
+          </div>
+        )}
       </div>
 
       {result && (

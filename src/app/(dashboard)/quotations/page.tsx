@@ -30,6 +30,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { format } from 'date-fns';
+
+function formatQuoteListDate(iso: string | undefined): string {
+  if (!iso?.trim()) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return format(d, 'd/M/yyyy');
+}
 
 const STATUS_FILTER = [
   'All',
@@ -112,16 +120,16 @@ export default function QuotationsPage() {
     if (dateFrom) {
       const from = new Date(dateFrom);
       list = list.filter((q) => {
-        const d = safeQuoteDate(q.quoteDate) ?? safeQuoteDate(q.createdAt ?? '');
-        return d && d >= from;
+        const d = safeQuoteDate(q.quoteDate);
+        return d != null && d >= from;
       });
     }
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
       list = list.filter((q) => {
-        const d = safeQuoteDate(q.quoteDate) ?? safeQuoteDate(q.createdAt ?? '');
-        return d && d <= to;
+        const d = safeQuoteDate(q.quoteDate);
+        return d != null && d <= to;
       });
     }
     if (search.trim()) {
@@ -166,7 +174,7 @@ export default function QuotationsPage() {
     let converted = 0;
     items.forEach((row) => {
       totalValue += row.monthlyRate || 0;
-      const d = safeQuoteDate(row.quoteDate) ?? safeQuoteDate(row.createdAt ?? '');
+      const d = safeQuoteDate(row.quoteDate);
       if (d && d.getMonth() === m && d.getFullYear() === y) thisMonth += 1;
       if (row.status === 'CONVERTED_TO_INVOICE') converted += 1;
     });
@@ -364,7 +372,7 @@ export default function QuotationsPage() {
               <tbody className="divide-y divide-[#E0E8F0]">
                 {paged.map((row: QuotationListItem) => {
                   const clientName = row.client?.name ?? clients.find((c) => c.id === row.clientId)?.name ?? '—';
-                  const dateStr = row.quoteDate ? new Date(row.quoteDate).toLocaleDateString('en-IN') : '—';
+                  const dateStr = formatQuoteListDate(row.quoteDate);
                   const st = displayText(row.status, 'DRAFT');
                   const badge = STATUS_BADGE_CLASSES[st] ?? 'bg-[#7A9AB8]/15 text-[#5C6F82]';
                   const isDraft = st === 'DRAFT';
