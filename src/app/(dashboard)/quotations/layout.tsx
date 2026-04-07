@@ -6,11 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-/** Mirrors sidebar: `quotations` + `read` (see permissions matrix). */
+/** Mirrors sidebar: `quotations` + `view` (see permissions matrix). */
 export default function QuotationsLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const quotationsRead = usePermission('quotations', 'read');
+  const quotationsRead = usePermission('quotations', 'view');
   const allowed =
     authLoading || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || quotationsRead;
 

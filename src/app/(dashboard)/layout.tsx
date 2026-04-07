@@ -228,7 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const quotationsReadAllowed = usePermission('quotations', 'read');
+  const quotationsReadAllowed = usePermission('quotations', 'view');
   const showQuotationsNav =
     isLoading || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || quotationsReadAllowed;
   const [sidebarOpen, setSidebarOpen] = useState(false);
