@@ -376,6 +376,7 @@ export default function QuotationsPage() {
                   const st = displayText(row.status, 'DRAFT');
                   const badge = STATUS_BADGE_CLASSES[st] ?? 'bg-[#7A9AB8]/15 text-[#5C6F82]';
                   const isDraft = st === 'DRAFT';
+                  const canEdit = isDraft || row.sourceType === 'imported';
                   return (
                     <tr key={row.id} className="hover:bg-[#F4F6F8]">
                       <td className="px-4 py-3">
@@ -397,7 +398,7 @@ export default function QuotationsPage() {
                           <Link href={`/quotations/${row.id}`} className="p-2 text-[#42A5F5] hover:bg-[#42A5F5]/10 rounded" title="View">
                             <Eye className="w-4 h-4" />
                           </Link>
-                          {isDraft && (
+                          {canEdit && (
                             <Link href={`/quotations/${row.id}/edit`} className="p-2 text-[#1565C0] hover:bg-[#1565C0]/10 rounded" title="Edit">
                               <Pencil className="w-4 h-4" />
                             </Link>

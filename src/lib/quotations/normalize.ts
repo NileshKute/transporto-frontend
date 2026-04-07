@@ -12,6 +12,7 @@ export interface QuotationListItem {
   vehicleTypeOther?: string;
   monthlyRate: number;
   status: string;
+  sourceType?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,6 +51,10 @@ export function normalizeQuotationRow(raw: unknown): QuotationListItem | null {
     vehicleTypeOther: displayText(r.vehicleTypeOther ?? r.vehicle_type_other, ''),
     monthlyRate: readNum(r.monthlyRate ?? r.monthly_rate),
     status: displayText(r.status, 'DRAFT'),
+    sourceType:
+      r.sourceType != null || r.source_type != null
+        ? displayText(r.sourceType ?? r.source_type, '')
+        : undefined,
     createdAt: r.createdAt != null ? String(r.createdAt) : r.created_at != null ? String(r.created_at) : undefined,
     updatedAt: r.updatedAt != null ? String(r.updatedAt) : r.updated_at != null ? String(r.updated_at) : undefined,
   };

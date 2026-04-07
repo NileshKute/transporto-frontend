@@ -207,6 +207,8 @@ export default function QuotationDetailPage() {
 
   const statusStr = displayText(q.status, 'DRAFT');
   const isDraft = statusStr === 'DRAFT';
+  const sourceType = displayText(q.sourceType ?? q.source_type, '');
+  const canEdit = isDraft || sourceType === 'imported';
   const isSent = statusStr === 'SENT';
   const isAccepted = statusStr === 'ACCEPTED';
   const badge = STATUS_BADGE_CLASSES[statusStr] ?? 'bg-[#7A9AB8]/15 text-[#5C6F82]';
@@ -254,7 +256,7 @@ export default function QuotationDetailPage() {
           </span>
         </div>
         <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          {isDraft && (
+          {canEdit && (
             <Link
               href={`/quotations/${id}/edit`}
               className="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-2 px-4 py-2 rounded-lg border border-[#1565C0] text-[#1565C0] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#1565C0]/5"
