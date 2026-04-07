@@ -4,13 +4,14 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { usePermission } from '@/hooks/usePermission';
 import { safe } from '@/lib/utils';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, ScrollText,
+  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin,
 } from 'lucide-react';
 
 const navGroups = [
@@ -54,7 +55,7 @@ const navGroups = [
     items: [
       { href: '/clients', icon: Building2, label: 'Clients' },
       { href: '/invoices', icon: FileText, label: 'Invoices' },
-      { href: '/quotations', icon: ScrollText, label: 'Quotations' },
+      { href: '/quotations', icon: FileText, label: 'Quotations' },
     ]
   },
   {
@@ -227,6 +228,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const quotationsReadAllowed = usePermission('quotations', 'read');
+  const showQuotationsNav =
+    isLoading || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || quotationsReadAllowed;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useIdleTimeout(300000); // 5 minutes
 
@@ -314,7 +318,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div key={group.label}>
               <p className="font-['Barlow_Condensed'] text-[10px] font-semibold uppercase tracking-widest text-[#7A9AB8] px-3 mb-2">{group.label}</p>
               <div className="space-y-1">
-                {group.items.map(item => {
+                {group.items
+                  .filter((item) => (item.href === '/quotations' ? showQuotationsNav : true))
+                  .map(item => {
                   const path = pathname ?? '';
                   const isActive =
                     item.href === '/dashboard'

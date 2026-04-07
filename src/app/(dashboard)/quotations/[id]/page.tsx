@@ -10,8 +10,8 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { displayText, toArray } from '@/lib/displayText';
 import { pickQuotationPayload, readStringArray } from '@/lib/quotations/normalize';
-import { STATUS_BADGE_CLASSES, VEHICLE_QUOTE_TYPE_OPTIONS } from '@/lib/quotations/constants';
-import { ArrowLeft, Download, Pencil, FileOutput, RefreshCw } from 'lucide-react';
+import { QUOTATION_STATUSES, STATUS_BADGE_CLASSES, VEHICLE_QUOTE_TYPE_OPTIONS } from '@/lib/quotations/constants';
+import { ArrowLeft, Download, Pencil, FileOutput, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const inputClass =
@@ -68,6 +68,8 @@ export default function QuotationDetailPage() {
 
   const [statusModal, setStatusModal] = useState<{ open: boolean; nextStatus: string }>({ open: false, nextStatus: '' });
   const [statusNotes, setStatusNotes] = useState('');
+  const [changeStatusOpen, setChangeStatusOpen] = useState(false);
+  const [pickedStatus, setPickedStatus] = useState('');
   const [convertOpen, setConvertOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -115,6 +117,7 @@ export default function QuotationDetailPage() {
       toast.success('Status updated');
       setStatusModal({ open: false, nextStatus: '' });
       setStatusNotes('');
+      setChangeStatusOpen(false);
     },
     onError: (e: unknown) => {
       const msg =
@@ -217,9 +220,21 @@ export default function QuotationDetailPage() {
     setStatusModal({ open: true, nextStatus });
   };
 
+  const openChangeStatusPicker = () => {
+    const alternatives = QUOTATION_STATUSES.filter((s) => s !== statusStr);
+    setPickedStatus(alternatives[0] ?? 'SENT');
+    setStatusNotes('');
+    setChangeStatusOpen(true);
+  };
+
   const submitStatus = () => {
     if (!statusModal.nextStatus) return;
     statusMutation.mutate({ status: statusModal.nextStatus, notes: statusNotes.trim() || undefined });
+  };
+
+  const submitPickedStatus = () => {
+    if (!pickedStatus) return;
+    statusMutation.mutate({ status: pickedStatus, notes: statusNotes.trim() || undefined });
   };
 
   return (
@@ -237,39 +252,46 @@ export default function QuotationDetailPage() {
             {statusStr.replace(/_/g, ' ')}
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
           {isDraft && (
             <Link
               href={`/quotations/${id}/edit`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#1565C0] text-[#1565C0] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#1565C0]/5"
+              className="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-2 px-4 py-2 rounded-lg border border-[#1565C0] text-[#1565C0] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#1565C0]/5"
             >
-              <Pencil className="w-4 h-4" /> Edit
+              <Pencil className="w-4 h-4 shrink-0" /> Edit
             </Link>
           )}
           <button
             type="button"
-            onClick={() => void openPdfTab()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#42A5F5] text-[#42A5F5] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#42A5F5]/10"
+            onClick={() => openChangeStatusPicker()}
+            className="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-2 px-4 py-2 rounded-lg border border-[#0D2847] text-[#0D2847] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#F4F6F8]"
           >
-            <Download className="w-4 h-4" /> Download PDF
+            <ArrowLeftRight className="w-4 h-4 shrink-0" /> Change status
+          </button>
+          <button
+            type="button"
+            onClick={() => void openPdfTab()}
+            className="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-2 px-4 py-2 rounded-lg border border-[#42A5F5] text-[#42A5F5] font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#42A5F5]/10"
+          >
+            <Download className="w-4 h-4 shrink-0" /> Download PDF
           </button>
           {isAccepted && (
             <button
               type="button"
               onClick={() => setConvertOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7C3AED] text-white font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#6d28d9]"
+              className="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-2 px-4 py-2 rounded-lg bg-[#7C3AED] text-white font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#6d28d9]"
             >
-              <FileOutput className="w-4 h-4" /> Convert to invoice
+              <FileOutput className="w-4 h-4 shrink-0" /> Convert to invoice
             </button>
           )}
-          <div className="relative inline-flex">
+          <div className="relative inline-flex flex-1 sm:flex-none min-w-0 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => void loadPdfPreview()}
               disabled={pdfLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#1565C0] disabled:opacity-50"
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-4 py-2 rounded-lg bg-[#0D2847] text-white font-['Barlow_Condensed'] font-semibold uppercase text-sm hover:bg-[#1565C0] disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${pdfLoading ? 'animate-spin' : ''}`} /> PDF preview
+              <RefreshCw className={`w-4 h-4 shrink-0 ${pdfLoading ? 'animate-spin' : ''}`} /> PDF preview
             </button>
           </div>
         </div>
@@ -280,7 +302,7 @@ export default function QuotationDetailPage() {
           <button
             type="button"
             onClick={() => openStatus('SENT')}
-            className="px-4 py-2 rounded-lg bg-[#42A5F5] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#1565C0]"
+            className="flex-1 sm:flex-none min-w-0 px-4 py-2 rounded-lg bg-[#42A5F5] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#1565C0]"
           >
             Mark as sent
           </button>
@@ -290,14 +312,14 @@ export default function QuotationDetailPage() {
             <button
               type="button"
               onClick={() => openStatus('ACCEPTED')}
-              className="px-4 py-2 rounded-lg bg-[#16A34A] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#15803d]"
+              className="flex-1 sm:flex-none min-w-0 px-4 py-2 rounded-lg bg-[#16A34A] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#15803d]"
             >
               Mark as accepted
             </button>
             <button
               type="button"
               onClick={() => openStatus('REJECTED')}
-              className="px-4 py-2 rounded-lg bg-[#DC2626] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#b91c1c]"
+              className="flex-1 sm:flex-none min-w-0 px-4 py-2 rounded-lg bg-[#DC2626] text-white font-['Barlow_Condensed'] uppercase text-sm hover:bg-[#b91c1c]"
             >
               Mark as rejected
             </button>
@@ -403,6 +425,36 @@ export default function QuotationDetailPage() {
           )}
         </div>
       </div>
+
+      <Modal isOpen={changeStatusOpen} onClose={() => setChangeStatusOpen(false)} title="Change status">
+        <label className="block font-['Barlow_Condensed'] text-xs uppercase text-[#7A9AB8] mb-1">New status</label>
+        <select
+          className={inputClass}
+          value={pickedStatus}
+          onChange={(e) => setPickedStatus(e.target.value)}
+        >
+          {QUOTATION_STATUSES.filter((s) => s !== statusStr).map((s) => (
+            <option key={s} value={s}>
+              {s.replace(/_/g, ' ')}
+            </option>
+          ))}
+        </select>
+        <label className="block font-['Barlow_Condensed'] text-xs uppercase text-[#7A9AB8] mb-1 mt-3">Notes (optional)</label>
+        <textarea className={inputClass} rows={3} value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} />
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4">
+          <button type="button" onClick={() => setChangeStatusOpen(false)} className="px-4 py-2 rounded-lg border border-[#E0E8F0] font-['Barlow_Condensed'] uppercase text-sm">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => submitPickedStatus()}
+            disabled={statusMutation.isPending || !pickedStatus}
+            className="px-4 py-2 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase text-sm disabled:opacity-50"
+          >
+            {statusMutation.isPending ? 'Saving…' : 'Update status'}
+          </button>
+        </div>
+      </Modal>
 
       <Modal isOpen={statusModal.open} onClose={() => setStatusModal({ open: false, nextStatus: '' })} title="Update status">
         <p className="text-sm text-[#7A9AB8] mb-3 font-['Rajdhani']">New status: <strong className="text-[#0D2847]">{statusModal.nextStatus.replace(/_/g, ' ')}</strong></p>
