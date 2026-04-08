@@ -326,11 +326,13 @@ export default function QuotationsPage() {
           />
           <div className="flex-1 min-w-[200px] w-full sm:w-auto">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7A9AB8] pointer-events-none" />
+              {!searchInput && (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              )}
               <input
                 type="text"
                 placeholder="Search quote no, client, attn, subject, terms, content..."
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] outline-none focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/30"
+                className={`w-full ${searchInput ? 'pl-4' : 'pl-11'} pr-4 py-3 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] outline-none focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/30`}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => {
