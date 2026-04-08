@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -50,6 +50,7 @@ const STATUS_FILTER = [
 ] as const;
 
 const LIMIT = 20;
+const SEARCH_DEBOUNCE_MS = 400;
 
 type ClientOpt = { id: string; name: string };
 
@@ -82,13 +83,27 @@ export default function QuotationsPage() {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const trimmed = searchInput.trim();
+      setSearchQuery((prev) => {
+        if (prev !== trimmed) setPage(1);
+        return trimmed;
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
   const { data: listPayload, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['quotations-list'],
+    queryKey: ['quotations-list', searchQuery],
     queryFn: async () => {
-      const res = await quotationsApi.list({ limit: 500 });
+      const params: Record<string, string | number> = { limit: 500 };
+      if (searchQuery) params.search = searchQuery;
+      const res = await quotationsApi.list(params);
       return res.data;
     },
   });
@@ -132,17 +147,8 @@ export default function QuotationsPage() {
         return d != null && d <= to;
       });
     }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter((row) => {
-        const num = row.quoteNumber.toLowerCase();
-        const clientName = (row.client?.name ?? clients.find((c) => c.id === row.clientId)?.name ?? '').toLowerCase();
-        const attn = (row.attnPerson ?? '').toLowerCase();
-        return num.includes(q) || clientName.includes(q) || attn.includes(q);
-      });
-    }
     return list;
-  }, [items, statusFilter, clientFilter, vehicleTypeFilter, dateFrom, dateTo, search, clients]);
+  }, [items, statusFilter, clientFilter, vehicleTypeFilter, dateFrom, dateTo, clients]);
 
   const { data: statsRemote } = useQuery({
     queryKey: ['quotations-stats'],
@@ -318,18 +324,28 @@ export default function QuotationsPage() {
               setPage(1);
             }}
           />
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7A9AB8]" />
-            <input
-              type="text"
-              placeholder="Quote no, client, attn…"
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] focus:border-[#42A5F5]"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
+          <div className="flex-1 min-w-[200px] w-full sm:w-auto">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7A9AB8] pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search quote no, client, attn, subject, terms, content..."
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] focus:border-[#42A5F5]"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSearchQuery(searchInput.trim());
+                    setPage(1);
+                  }
+                }}
+                aria-describedby="quotations-search-hint"
+              />
+            </div>
+            <p id="quotations-search-hint" className="text-xs text-gray-500 mt-1 font-['Rajdhani']">
+              Searches across quote number, client name, attn person, subject, terms, notes, and raw text
+            </p>
           </div>
         </div>
       </div>
