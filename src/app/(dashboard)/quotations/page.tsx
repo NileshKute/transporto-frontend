@@ -330,7 +330,7 @@ export default function QuotationsPage() {
               <input
                 type="text"
                 placeholder="Search quote no, client, attn, subject, terms, content..."
-                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] focus:border-[#42A5F5]"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-[#E0E8F0] text-sm font-['Rajdhani'] text-[#0D2847] outline-none focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/30"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => {
