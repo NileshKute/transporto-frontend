@@ -21,6 +21,13 @@ import toast from 'react-hot-toast';
 const inputClass =
   'w-full rounded-lg border border-[#E0E8F0] px-3 py-2 text-[#0D2847] focus:border-[#42A5F5] focus:ring-2 focus:ring-[#42A5F5]/20 font-["Rajdhani"] text-sm';
 
+/** +25 °C through -25 °C (51 steps) for quotation temperature. */
+const QUOTATION_TEMPERATURE_OPTIONS = Array.from({ length: 51 }, (_, i) => 25 - i);
+
+function clampQuotationTemp(n: number): number {
+  return Math.max(-25, Math.min(25, Math.round(n)));
+}
+
 function sliceDate(iso: string): string {
   if (!iso) return '';
   return iso.slice(0, 10);
@@ -63,7 +70,7 @@ export default function QuotationForm({ quotationId }: { quotationId?: string })
   const [vehicleType, setVehicleType] = useState('REEFER_VAN');
   const [vehicleTypeOther, setVehicleTypeOther] = useState('');
   const [loadingCapacityKg, setLoadingCapacityKg] = useState<number | ''>('');
-  const [temperatureC, setTemperatureC] = useState(-20);
+  const [temperatureC, setTemperatureC] = useState<number | ''>(-20);
   const [monthlyRateInput, setMonthlyRateInput] = useState('');
   const [fixedKm, setFixedKm] = useState<number | ''>('');
   const [additionalPerKmRs, setAdditionalPerKmRs] = useState<number | ''>('');
@@ -137,7 +144,13 @@ export default function QuotationForm({ quotationId }: { quotationId?: string })
         ? Number(q.loadingCapacityKg ?? q.loading_capacity_kg) || ''
         : ''
     );
-    setTemperatureC(Number(q.temperatureC ?? q.temperature_c ?? -20) || -20);
+    const tRaw = q.temperatureC ?? q.temperature_c;
+    if (tRaw != null && tRaw !== '') {
+      const n = Number(tRaw);
+      setTemperatureC(Number.isFinite(n) ? clampQuotationTemp(n) : -20);
+    } else {
+      setTemperatureC(-20);
+    }
     const mr = q.monthlyRate ?? q.monthly_rate;
     setMonthlyRateInput(mr != null && mr !== '' ? String(mr) : '');
     setFixedKm(q.fixedKm != null || q.fixed_km != null ? Number(q.fixedKm ?? q.fixed_km) || '' : '');
@@ -175,7 +188,7 @@ export default function QuotationForm({ quotationId }: { quotationId?: string })
       vehicleType,
       vehicleTypeOther: vehicleType === 'OTHER' ? vehicleTypeOther.trim() || undefined : undefined,
       loadingCapacityKg: loadingCapacityKg === '' ? undefined : Number(loadingCapacityKg),
-      temperatureC: Number(temperatureC),
+      temperatureC: temperatureC === '' ? -20 : Number(temperatureC),
       monthlyRate: monthlyRateNum,
       fixedKm: fixedKm === '' ? undefined : Number(fixedKm),
       additionalPerKmRs: additionalPerKmRs === '' ? undefined : Number(additionalPerKmRs),
@@ -401,12 +414,21 @@ export default function QuotationForm({ quotationId }: { quotationId?: string })
             </div>
             <div>
               <label className="block font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8] mb-1">Temperature (°C)</label>
-              <input
-                type="number"
+              <select
                 className={inputClass}
-                value={temperatureC}
-                onChange={(e) => setTemperatureC(Number(e.target.value))}
-              />
+                value={temperatureC === '' ? '' : String(temperatureC)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTemperatureC(v === '' ? '' : Number(v));
+                }}
+              >
+                <option value="">Select temperature</option>
+                {QUOTATION_TEMPERATURE_OPTIONS.map((temp) => (
+                  <option key={temp} value={temp}>
+                    {temp > 0 ? `+${temp}` : temp} °C
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block font-['Barlow_Condensed'] text-xs uppercase tracking-wider text-[#7A9AB8] mb-1">Monthly rate (₹)</label>
