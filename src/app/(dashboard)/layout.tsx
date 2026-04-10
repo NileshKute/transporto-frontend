@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
   AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
-  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, Landmark,
+  BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, Milestone,
 } from 'lucide-react';
 
 const navGroups = [
@@ -32,7 +32,7 @@ const navGroups = [
       { href: '/bpcl', icon: Fuel, label: 'BPCL Transactions' },
       { href: '/bpcl/import', icon: Upload, label: 'Import BPCL Data' },
       { href: '/bpcl/cards', icon: CreditCard, label: 'Card Management' },
-      { href: '/toll', icon: Landmark, label: 'Toll' },
+      { href: '/toll', icon: Milestone, label: 'Toll' },
     ],
   },
   {
@@ -102,7 +102,7 @@ function getPageTitle(pathname: string | null) {
     '/bpcl': 'BPCL Transactions',
     '/bpcl/import': 'Import BPCL Data',
     '/bpcl/cards': 'Card Management',
-    '/toll': 'Toll',
+    '/toll': 'Toll Management',
     '/maintenance': 'Vehicle Maintenance',
     '/admin/maintenance-types': 'Maintenance Types',
     '/admin/users': 'User Management',
@@ -179,7 +179,7 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
     return items;
   }
   if (p.startsWith('/toll')) {
-    items.push({ label: 'Toll', href: '/toll' });
+    items.push({ label: 'Toll Management', href: '/toll' });
     return items;
   }
   if (p.startsWith('/maintenance')) {
