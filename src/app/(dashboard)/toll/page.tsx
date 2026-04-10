@@ -227,8 +227,18 @@ function parseSummary(resData: unknown) {
       ? (root.data as Record<string, unknown>)
       : root);
 
-  const thisMonthDebit = safeNum(s.thisMonthDebit ?? s.this_month_debit, 0);
-  const thisMonthTxnCount = safeNum(s.thisMonthTxnCount ?? s.this_month_txn_count, 0);
+  const latestMonthDebit = safeNum(
+    s.latestMonthDebit ?? s.latest_month_debit ?? s.thisMonthDebit ?? s.this_month_debit,
+    0,
+  );
+  const latestMonthCount = safeNum(
+    s.latestMonthCount ?? s.latest_month_count ?? s.thisMonthTxnCount ?? s.this_month_txn_count,
+    0,
+  );
+  const latestMonthLabel = safeStr(
+    s.latestMonthLabel ?? s.latest_month_label ?? '',
+    '',
+  );
 
   const topPlazaRaw = s.topPlaza ?? s.top_plaza;
   let topPlazaName = '—';
@@ -250,8 +260,9 @@ function parseSummary(resData: unknown) {
   }
 
   return {
-    thisMonthDebit,
-    thisMonthTxnCount,
+    latestMonthDebit,
+    latestMonthCount,
+    latestMonthLabel,
     topPlazaName,
     topPlazaAmount,
     highVehicle,
@@ -526,8 +537,9 @@ export default function TollManagementPage() {
   }, [vehiclesRaw]);
 
   const summary = summaryRes ?? {
-    thisMonthDebit: 0,
-    thisMonthTxnCount: 0,
+    latestMonthDebit: 0,
+    latestMonthCount: 0,
+    latestMonthLabel: '',
     topPlazaName: '—',
     topPlazaAmount: 0,
     highVehicle: '—',
@@ -787,14 +799,16 @@ export default function TollManagementPage() {
             <StatCard
               icon={IndianRupee}
               iconColor="amber"
-              title="This month debit"
-              value={formatInrTwoDecimals(summary.thisMonthDebit)}
+              title="Latest month debit"
+              value={formatInrTwoDecimals(summary.latestMonthDebit)}
+              subtitle={summary.latestMonthLabel ? summary.latestMonthLabel : undefined}
             />
             <StatCard
               icon={ListOrdered}
               iconColor="blue"
-              title="This month txn count"
-              value={String(formatNumber(summary.thisMonthTxnCount))}
+              title="Latest month txn count"
+              value={String(formatNumber(summary.latestMonthCount))}
+              subtitle={summary.latestMonthLabel ? summary.latestMonthLabel : undefined}
             />
             <StatCard
               icon={MapPin}
