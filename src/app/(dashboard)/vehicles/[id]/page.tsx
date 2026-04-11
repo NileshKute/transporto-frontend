@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { vehiclesApi } from '@/lib/api/vehicles';
+import { vehiclesApi, type VehicleGpsHistoryResponse } from '@/lib/api/vehicles';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -35,6 +35,7 @@ import {
   Navigation,
 } from 'lucide-react';
 import { VerifyRcForVehicleButton } from '@/components/vehicles/RcVerifyButtons';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const TABS = [
   'Trips',
@@ -273,11 +274,20 @@ export default function VehicleDetailPage() {
 
   const gpsQuery = useQuery({
     queryKey: ['vehicle-gps-history', vehicleId],
-    queryFn: async () => {
+    queryFn: async (): Promise<VehicleGpsHistoryResponse> => {
       const r = await vehiclesApi.getGpsHistory(vehicleId);
-      const root = r.data as Record<string, unknown> | undefined;
-      const pts = root?.points ?? root?.data;
-      return Array.isArray(pts) ? pts : [];
+      const d = r.data;
+      if (!d || typeof d !== 'object') {
+        return { hours: 0, since: '', points: [] };
+      }
+      const raw = d as Record<string, unknown>;
+      const pts = raw.points ?? raw.data;
+      const points = Array.isArray(pts) ? pts : [];
+      return {
+        hours: Number(raw.hours ?? 168),
+        since: String(raw.since ?? ''),
+        points,
+      };
     },
     enabled: !!vehicleId && tab === 'GPS',
   });
@@ -943,12 +953,9 @@ export default function VehicleDetailPage() {
                   onRetry={() => void gpsQuery.refetch()}
                 />
               ) : (
-                <VehicleGpsPathMap
-                  points={((gpsQuery.data ?? []) as { lat: number; lng: number }[]).map((p) => ({
-                    lat: p.lat,
-                    lng: p.lng,
-                  }))}
-                />
+                <ErrorBoundary fallbackMessage="Failed to render GPS map">
+                  <VehicleGpsPathMap points={gpsQuery.data?.points ?? []} />
+                </ErrorBoundary>
               )}
             </div>
           )}

@@ -1,5 +1,18 @@
 import api from '@/lib/api';
 
+export type VehicleGpsHistoryPoint = {
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  recordedAt: string;
+};
+
+export type VehicleGpsHistoryResponse = {
+  hours: number;
+  since: string;
+  points: VehicleGpsHistoryPoint[];
+};
+
 export const vehiclesApi = {
   get: (id: string) => api.get(`/vehicles/${id}`),
 
@@ -17,5 +30,6 @@ export const vehiclesApi = {
   getMaintenanceHistory: (id: string, params?: { page?: number; limit?: number }) =>
     api.get(`/vehicles/${id}/maintenance-history`, { params }),
 
-  getGpsHistory: (id: string) => api.get(`/vehicles/${id}/gps-history`),
+  getGpsHistory: (id: string, params?: { hours?: number }) =>
+    api.get<VehicleGpsHistoryResponse>(`/vehicles/${id}/gps-history`, { params }),
 };
