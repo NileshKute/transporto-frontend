@@ -9,7 +9,7 @@ import { safe } from '@/lib/utils';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
-  AlertTriangle, Shield, Snowflake, Clock, MessageSquare,
+  AlertTriangle, Shield, Snowflake, Clock, MessageSquare, MessageCircle,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
   BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, Milestone,
 } from 'lucide-react';
@@ -64,6 +64,7 @@ const navGroups = [
     items: [
       { href: '/shifts', icon: Clock, label: 'Shifts' },
       { href: '/whatsapp', icon: MessageSquare, label: 'WhatsApp' },
+      { href: '/whatsapp-meta', icon: MessageCircle, label: 'WhatsApp Meta' },
     ]
   },
 ];
@@ -111,6 +112,7 @@ function getPageTitle(pathname: string | null) {
     '/cold-storage': 'Cold Storage',
     '/shifts': 'Shifts',
     '/whatsapp': 'WhatsApp',
+    '/whatsapp-meta': 'WhatsApp Meta',
     '/driver-ledger': 'Driver Ledger',
     '/salary': 'Salary',
     '/admin/permissions': 'Permissions',
@@ -200,6 +202,10 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
   }
   if (p.startsWith('/shifts')) {
     items.push({ label: 'Shifts', href: '/shifts' });
+    return items;
+  }
+  if (p.startsWith('/whatsapp-meta')) {
+    items.push({ label: 'WhatsApp Meta', href: '/whatsapp-meta' });
     return items;
   }
   if (p.startsWith('/whatsapp')) {
