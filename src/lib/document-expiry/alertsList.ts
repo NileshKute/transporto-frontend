@@ -43,6 +43,7 @@ export function normalizeAlertRow(raw: unknown): DocAlertRow | null {
   const entityLabel =
     String(
       r.entityLabel ??
+        r.entityName ??
         r.entity_name ??
         r.regNumber ??
         r.reg_number ??
