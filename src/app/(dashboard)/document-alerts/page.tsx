@@ -169,6 +169,24 @@ export default function DocumentAlertsPage() {
     },
   });
 
+  const unackMutation = useMutation({
+    mutationFn: (id: string) => documentExpiryApi.unacknowledge(id),
+    onSuccess: () => {
+      toast.success('Acknowledgement cleared');
+      void qc.invalidateQueries({ queryKey: ['document-expiry-summary'] });
+      void qc.invalidateQueries({ queryKey: ['document-expiry-alerts'] });
+      void qc.invalidateQueries({ queryKey: ['document-expiry-alerts-dashboard'] });
+    },
+    onError: (e: unknown) => {
+      const msg = e && typeof e === 'object' && 'response' in e ? (e as any).response?.data?.message : null;
+      toast.error(typeof msg === 'string' ? msg : 'Failed to undo');
+    },
+  });
+
+  const rowBusy = (id: string) =>
+    (ackOneMutation.isPending && ackOneMutation.variables === id) ||
+    (unackMutation.isPending && unackMutation.variables === id);
+
   const rows = alertsQuery.data?.rows ?? [];
   const total = alertsQuery.data?.total ?? rows.length;
   const totalPages = Math.max(
@@ -327,25 +345,42 @@ export default function DocumentAlertsPage() {
                         <td className={`px-4 py-3 font-['Rajdhani'] text-sm ${daysRemainingClass(dr)}`}>
                           {dr != null && !Number.isNaN(dr) ? dr : '—'}
                         </td>
-                        <td className="px-4 py-3 font-['Rajdhani'] text-sm text-[#7A9AB8]">
-                          {row.acknowledged ? (
-                            <span className="text-green-700">Acknowledged ✅</span>
-                          ) : (
-                            <span>Pending ⏳</span>
-                          )}
+                        <td className="px-4 py-3 font-['Rajdhani'] text-sm">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              row.acknowledged ? unackMutation.mutate(row.id) : ackOneMutation.mutate(row.id)
+                            }
+                            disabled={rowBusy(row.id)}
+                            title={row.acknowledged ? 'Click to mark as pending' : 'Click to acknowledge'}
+                            className={`text-left rounded-md px-1 py-0.5 -mx-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              row.acknowledged
+                                ? 'text-green-700 hover:bg-green-50'
+                                : 'text-amber-700 hover:bg-amber-50'
+                            }`}
+                          >
+                            {row.acknowledged ? 'Acknowledged ✅' : 'Pending ⏳'}
+                          </button>
                         </td>
                         <td className="px-4 py-3">
-                          {!row.acknowledged ? (
+                          {row.acknowledged ? (
+                            <button
+                              type="button"
+                              onClick={() => unackMutation.mutate(row.id)}
+                              disabled={rowBusy(row.id)}
+                              className="text-sm px-3 py-1.5 rounded-lg border border-[#E0E8F0] text-[#5C6F82] bg-white font-['Barlow_Condensed'] uppercase tracking-wider hover:bg-[#F4F6F8] hover:border-[#7A9AB8] disabled:opacity-50"
+                            >
+                              Undo
+                            </button>
+                          ) : (
                             <button
                               type="button"
                               onClick={() => ackOneMutation.mutate(row.id)}
-                              disabled={ackOneMutation.isPending}
+                              disabled={rowBusy(row.id)}
                               className="text-sm px-3 py-1.5 rounded-lg bg-[#1565C0] text-white font-['Barlow_Condensed'] uppercase tracking-wider hover:bg-[#0D2847] disabled:opacity-50"
                             >
                               Acknowledge
                             </button>
-                          ) : (
-                            <span className="text-xs text-[#7A9AB8]">—</span>
                           )}
                         </td>
                       </tr>

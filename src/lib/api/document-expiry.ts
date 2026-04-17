@@ -13,6 +13,9 @@ export const documentExpiryApi = {
 
   acknowledge: (id: string) => api.post<unknown>(`/document-expiry/acknowledge/${encodeURIComponent(id)}`),
 
+  unacknowledge: (id: string) =>
+    api.post<unknown>(`/document-expiry/unacknowledge/${encodeURIComponent(id)}`),
+
   acknowledgeAll: () => api.post<unknown>('/document-expiry/acknowledge-all'),
 
   runCheck: () => api.post<unknown>('/document-expiry/check-now'),

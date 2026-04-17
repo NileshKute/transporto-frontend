@@ -15,6 +15,19 @@ function readNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Avoid Boolean("false") === true when API sends string flags. */
+function parseAcknowledged(raw: Record<string, unknown>): boolean {
+  const v = raw.acknowledged ?? raw.isAcknowledged ?? raw.is_acknowledged;
+  if (v === true || v === 1) return true;
+  if (v === false || v === 0) return false;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes') return true;
+    if (s === 'false' || s === '0' || s === 'no' || s === '') return false;
+  }
+  return Boolean(v);
+}
+
 export function extractAlertsList(body: unknown): unknown[] {
   if (Array.isArray(body)) return body;
   if (!body || typeof body !== 'object') return [];
@@ -63,7 +76,7 @@ export function normalizeAlertRow(raw: unknown): DocAlertRow | null {
       : r.days_remaining != null
         ? readNum(r.days_remaining)
         : null;
-  const acknowledged = Boolean(r.acknowledged ?? r.isAcknowledged);
+  const acknowledged = parseAcknowledged(r);
   const severity = String(r.severity ?? 'INFO').toUpperCase();
   return {
     id,
