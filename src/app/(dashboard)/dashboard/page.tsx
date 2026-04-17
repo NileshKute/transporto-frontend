@@ -8,7 +8,16 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { LoadingSpinner, TableSkeleton } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate, formatIndianCurrency, safe, safeNumber } from '@/lib/utils';
-import { Truck, Users, Route, Fuel, Wrench, AlertTriangle, Shield, Snowflake, Building2, FileText, FileWarning } from 'lucide-react';
+import { format } from 'date-fns';
+import { documentExpiryApi } from '@/lib/api/document-expiry';
+import { getUnacknowledgedTotal } from '@/lib/document-expiry/summary';
+import {
+  extractAlertsList,
+  normalizeAlertRow,
+  sortAlertsByUrgency,
+  type DocAlertRow,
+} from '@/lib/document-expiry/alertsList';
+import { Truck, Users, User, Route, Fuel, Wrench, AlertTriangle, Shield, ShieldAlert, Snowflake, Building2, FileText, FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 
@@ -96,11 +105,50 @@ export default function DashboardPage() {
     queryKey: ['vehicle-expiry-summary'],
     queryFn: () => api.get('/vehicles/expiry-summary').then(r => r.data),
   });
+  const { data: docAlertsSummary } = useQuery({
+    queryKey: ['document-expiry-summary'],
+    queryFn: async () => {
+      try {
+        const r = await documentExpiryApi.getSummary();
+        return r.data;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60_000,
+  });
+  const { data: docAlertsListRaw } = useQuery({
+    queryKey: ['document-expiry-alerts-dashboard'],
+    queryFn: async () => {
+      try {
+        const r = await documentExpiryApi.getAlerts({ page: 1, limit: 50, acknowledged: 'false' });
+        return r.data;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 30_000,
+  });
 
   const invoices = Array.isArray(invoicesRaw) ? invoicesRaw : [];
   const clients = Array.isArray(clientsRaw) ? clientsRaw : [];
   const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
   const trips = Array.isArray(tripsRaw) ? tripsRaw : [];
+
+  const docUnackTotal = getUnacknowledgedTotal(docAlertsSummary);
+  const topDocAlerts = useMemo(() => {
+    const raw = extractAlertsList(docAlertsListRaw);
+    const rows = raw.map(normalizeAlertRow).filter((x): x is DocAlertRow => x != null);
+    return sortAlertsByUrgency(rows).slice(0, 5);
+  }, [docAlertsListRaw]);
+
+  const SEV_BADGE: Record<string, string> = {
+    EXPIRED: 'bg-red-100 text-red-800 border-red-300',
+    CRITICAL: 'bg-red-50 text-red-700 border-red-200',
+    URGENT: 'bg-orange-100 text-orange-800 border-orange-300',
+    WARNING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    INFO: 'bg-blue-100 text-blue-800 border-blue-300',
+  };
 
   const now = new Date();
   const thisMonth = now.getMonth();
@@ -311,6 +359,71 @@ export default function DashboardPage() {
             </div>
           </Link>
         ))}
+      </div>
+
+      <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-['Oswald'] text-base font-semibold text-[#0D2847] flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-[#1565C0]" />
+              Document Alerts
+            </h3>
+            <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-1">
+              {docUnackTotal > 0 ? (
+                <>
+                  <span className="font-semibold text-[#DC2626]">{docUnackTotal}</span> unacknowledged alert
+                  {docUnackTotal !== 1 ? 's' : ''}
+                </>
+              ) : (
+                'No pending document acknowledgements'
+              )}
+            </p>
+          </div>
+          <Link
+            href="/document-alerts"
+            className="text-sm text-[#1565C0] hover:text-[#0D2847] font-medium font-['Barlow_Condensed'] uppercase tracking-wider shrink-0"
+          >
+            View all →
+          </Link>
+        </div>
+        {topDocAlerts.length === 0 ? (
+          <p className="text-sm text-[#7A9AB8] font-['Rajdhani'] py-2">No urgent document alerts.</p>
+        ) : (
+          <ul className="divide-y divide-[#E0E8F0]">
+            {topDocAlerts.map((a) => {
+              const sev = a.severity.toUpperCase();
+              const badge = SEV_BADGE[sev] ?? SEV_BADGE.INFO;
+              const isVeh = a.entityType === 'VEHICLE' || String(a.entityType).toUpperCase().includes('VEH');
+              const expStr =
+                a.expiryDate &&
+                (() => {
+                  const d = new Date(a.expiryDate);
+                  return Number.isNaN(d.getTime()) ? null : format(d, 'dd MMM yyyy');
+                })();
+              return (
+                <li key={a.id} className="py-3 flex flex-wrap items-start gap-3 first:pt-0 last:pb-0">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badge}`}>{sev}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-['Rajdhani'] text-sm text-[#0D2847] flex items-center gap-1.5">
+                      {isVeh ? <Truck className="w-4 h-4 text-[#1565C0] shrink-0" /> : <User className="w-4 h-4 text-[#42A5F5] shrink-0" />}
+                      <span className="font-medium truncate">{a.entityLabel}</span>
+                      <span className="text-[#7A9AB8]">·</span>
+                      <span className="text-[#1A4A7A]">{a.documentType}</span>
+                    </p>
+                    <p className="font-['Rajdhani'] text-xs text-[#7A9AB8] mt-0.5">
+                      {expStr ? `Expires ${expStr}` : 'No expiry'}
+                      {a.daysRemaining != null && !Number.isNaN(a.daysRemaining) && (
+                        <span className="ml-2">
+                          ({a.daysRemaining <= 0 ? 'Overdue' : `${a.daysRemaining}d left`})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">

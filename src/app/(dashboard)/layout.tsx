@@ -2,14 +2,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { usePermission } from '@/hooks/usePermission';
 import { safe } from '@/lib/utils';
+import { documentExpiryApi } from '@/lib/api/document-expiry';
+import { getUnacknowledgedTotal } from '@/lib/document-expiry/summary';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
-  AlertTriangle, Shield, Snowflake, Clock, MessageSquare, MessageCircle,
+  AlertTriangle, Shield, ShieldAlert, Snowflake, Clock, MessageSquare, MessageCircle,
   LogOut, Bell, Search, Menu, X, ChevronRight, Building2, FileText,
   BookOpen, Wallet, Settings, Upload, CreditCard, MapPin, Milestone,
 } from 'lucide-react';
@@ -20,6 +23,7 @@ const navGroups = [
     items: [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
       { href: '/vehicles', icon: Truck, label: 'Vehicles' },
+      { href: '/document-alerts', icon: ShieldAlert, label: 'Document Alerts' },
       { href: '/gps', icon: MapPin, label: 'GPS Tracking' },
       { href: '/drivers', icon: Users, label: 'Drivers' },
       { href: '/trips', icon: Route, label: 'Trips' },
@@ -97,6 +101,7 @@ function getPageTitle(pathname: string | null) {
   const map: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/vehicles': 'Vehicles',
+    '/document-alerts': 'Document Alerts',
     '/drivers': 'Drivers',
     '/trips': 'Trips',
     '/fuel': 'Fuel',
@@ -151,6 +156,10 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
   if (p.startsWith('/vehicles')) {
     items.push({ label: 'Vehicles', href: '/vehicles' });
     if (p !== '/vehicles') items.push({ label: 'Detail' });
+    return items;
+  }
+  if (p.startsWith('/document-alerts')) {
+    items.push({ label: 'Document Alerts', href: '/document-alerts' });
     return items;
   }
   if (p.startsWith('/gps')) {
@@ -257,6 +266,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     [pathname, pageTitle]
   );
 
+  const { data: docExpirySummary } = useQuery({
+    queryKey: ['document-expiry-summary'],
+    queryFn: async () => {
+      try {
+        const r = await documentExpiryApi.getSummary();
+        return r.data;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60_000,
+  });
+  const docAlertBadge = getUnacknowledgedTotal(docExpirySummary);
+
   const userDisplayName = useMemo(() => {
     const n = safe(user?.name);
     return n === '—' ? 'User' : n;
@@ -350,7 +373,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       }`}
                     >
                       <item.icon size={18} className="text-[#42A5F5] flex-shrink-0" />
-                      <span>{String(item.label)}</span>
+                      <span className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                        <span className="truncate">{String(item.label)}</span>
+                        {item.href === '/document-alerts' && docAlertBadge > 0 && (
+                          <span className="flex-shrink-0 min-w-[1.25rem] h-5 px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center font-['Rajdhani']">
+                            {docAlertBadge > 99 ? '99+' : docAlertBadge}
+                          </span>
+                        )}
+                      </span>
                     </Link>
                   );
                 })}

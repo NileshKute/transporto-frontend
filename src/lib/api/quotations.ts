@@ -1,5 +1,19 @@
 import api from '@/lib/api';
 
+/**
+ * Quotation list/detail responses include scalar fields from Prisma, including:
+ * `quoteDate` (business date) and `createdAt` (record creation — useful fallback for imports).
+ */
+export type QuotationApiScalars = {
+  id?: string;
+  quoteDate?: string | null;
+  quote_date?: string | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  updatedAt?: string | null;
+  updated_at?: string | null;
+};
+
 /** Paths are relative to NEXT_PUBLIC_API_URL (includes `/api`). */
 export const quotationsApi = {
   list: (filters?: Record<string, unknown>) => api.get('/quotations', { params: filters }),

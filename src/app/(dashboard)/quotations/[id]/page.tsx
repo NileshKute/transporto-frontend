@@ -30,6 +30,25 @@ function readNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Prefer quoteDate; fall back to createdAt for legacy imports (show ~ in UI). */
+function formatDetailQuoteDate(q: Record<string, unknown>): { text: string; isEstimated: boolean } {
+  const quoteDate = String(q.quoteDate ?? q.quote_date ?? '').trim();
+  const createdAt = String(q.createdAt ?? q.created_at ?? '').trim();
+  if (quoteDate) {
+    const d = new Date(quoteDate);
+    if (!Number.isNaN(d.getTime())) {
+      return { text: format(d, 'dd MMM yyyy'), isEstimated: false };
+    }
+  }
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!Number.isNaN(d.getTime())) {
+      return { text: format(d, 'dd MMM yyyy'), isEstimated: true };
+    }
+  }
+  return { text: '—', isEstimated: false };
+}
+
 interface TimelineEntry {
   label: string;
   at: string;
@@ -346,13 +365,19 @@ export default function QuotationDetailPage() {
               <div>
                 <dt className="text-[#7A9AB8] text-xs uppercase font-['Barlow_Condensed']">Quote date</dt>
                 <dd>
-                  {q.quoteDate || q.quote_date
-                    ? (() => {
-                        const raw = String(q.quoteDate ?? q.quote_date);
-                        const d = new Date(raw);
-                        return Number.isNaN(d.getTime()) ? '—' : format(d, 'd/M/yyyy');
-                      })()
-                    : '—'}
+                  {(() => {
+                    const { text, isEstimated } = formatDetailQuoteDate(q);
+                    return (
+                      <>
+                        {text}
+                        {isEstimated && (
+                          <span className="ml-1 text-xs text-[#BA7517]" title="Estimated from record created date">
+                            ~
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </dd>
               </div>
               <div>

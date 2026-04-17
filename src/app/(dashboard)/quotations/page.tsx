@@ -32,11 +32,23 @@ import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { format } from 'date-fns';
 
-function formatQuoteListDate(iso: string | undefined): string {
-  if (!iso?.trim()) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return format(d, 'd/M/yyyy');
+function formatQuoteListDate(
+  quoteDate: string | undefined,
+  createdAt: string | undefined,
+): { text: string; isEstimated: boolean } {
+  if (quoteDate?.trim()) {
+    const d = new Date(quoteDate);
+    if (!Number.isNaN(d.getTime())) {
+      return { text: format(d, 'dd MMM yyyy'), isEstimated: false };
+    }
+  }
+  if (createdAt?.trim()) {
+    const d = new Date(createdAt);
+    if (!Number.isNaN(d.getTime())) {
+      return { text: format(d, 'dd MMM yyyy'), isEstimated: true };
+    }
+  }
+  return { text: '—', isEstimated: false };
 }
 
 const STATUS_FILTER = [
@@ -390,7 +402,7 @@ export default function QuotationsPage() {
               <tbody className="divide-y divide-[#E0E8F0]">
                 {paged.map((row: QuotationListItem) => {
                   const clientName = row.client?.name ?? clients.find((c) => c.id === row.clientId)?.name ?? '—';
-                  const dateStr = formatQuoteListDate(row.quoteDate);
+                  const { text: dateStr, isEstimated } = formatQuoteListDate(row.quoteDate, row.createdAt);
                   const st = displayText(row.status, 'DRAFT');
                   const badge = STATUS_BADGE_CLASSES[st] ?? 'bg-[#7A9AB8]/15 text-[#5C6F82]';
                   const isDraft = st === 'DRAFT';
@@ -402,7 +414,14 @@ export default function QuotationsPage() {
                           {displayText(row.quoteNumber, '—')}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 font-['Rajdhani'] text-sm text-[#7A9AB8]">{dateStr}</td>
+                      <td className="px-4 py-3 font-['Rajdhani'] text-sm text-[#7A9AB8]">
+                        {dateStr}
+                        {isEstimated && (
+                          <span className="ml-1 text-xs text-[#BA7517]" title="Estimated from import date">
+                            ~
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-['Rajdhani'] text-sm text-[#0D2847]">{displayText(clientName, '—')}</td>
                       <td className="px-4 py-3 font-['Rajdhani'] text-sm text-[#1A4A7A]">{vehicleLabel(row.vehicleType, row.vehicleTypeOther)}</td>
                       <td className="px-4 py-3 font-['Oswald'] font-semibold text-[#0D2847]">{formatIndianCurrency(row.monthlyRate)}</td>
