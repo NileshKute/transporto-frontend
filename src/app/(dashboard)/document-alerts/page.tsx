@@ -37,18 +37,54 @@ function readNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+const LIMIT = 50;
+
 function parseMeta(body: unknown): { total: number; totalPages: number } {
   if (!body || typeof body !== 'object') return { total: 0, totalPages: 1 };
   const o = body as Record<string, unknown>;
-  const inner = (o.data ?? o) as Record<string, unknown>;
-  const metaObj = inner.meta && typeof inner.meta === 'object' ? (inner.meta as Record<string, unknown>) : null;
-  const total = readNum(inner.total ?? o.total ?? (metaObj ? metaObj.total : undefined));
-  const limit = readNum(inner.limit ?? o.limit) || 50;
-  const totalPages = Math.max(
-    1,
-    Math.ceil(total / limit) || readNum(inner.totalPages ?? o.totalPages) || 1,
-  );
-  return { total: total || extractAlertsList(body).length, totalPages };
+  const list = extractAlertsList(body);
+
+  // Standard shape: { data: [...], total, page, limit, totalPages? }
+  if (Array.isArray(o.data)) {
+    const total = readNum(o.total) || list.length;
+    const limit = readNum(o.limit) || LIMIT;
+    const explicitTp = readNum(o.totalPages);
+    const totalPages =
+      explicitTp > 0 ? explicitTp : Math.max(1, Math.ceil(total / (limit || 1)) || 1);
+    return { total, totalPages };
+  }
+
+  if (Array.isArray(o.alerts)) {
+    const total = readNum(o.total) || list.length;
+    const limit = readNum(o.limit) || LIMIT;
+    const explicitTp = readNum(o.totalPages);
+    const totalPages =
+      explicitTp > 0 ? explicitTp : Math.max(1, Math.ceil(total / (limit || 1)) || 1);
+    return { total, totalPages };
+  }
+
+  // Nested envelope: { data: { data: [], total, ... } }
+  if (o.data && typeof o.data === 'object' && !Array.isArray(o.data)) {
+    const inner = o.data as Record<string, unknown>;
+    const total = readNum(inner.total ?? o.total);
+    const limit = readNum(inner.limit ?? o.limit) || LIMIT;
+    const metaObj =
+      inner.meta && typeof inner.meta === 'object' ? (inner.meta as Record<string, unknown>) : null;
+    const totalFromMeta = metaObj ? readNum(metaObj.total) : 0;
+    const t = total || totalFromMeta || list.length;
+    const totalPages = Math.max(
+      1,
+      readNum(inner.totalPages ?? o.totalPages) || Math.ceil(t / (limit || 1)) || 1,
+    );
+    return { total: t, totalPages };
+  }
+
+  const total = readNum(o.total) || list.length;
+  const limit = readNum(o.limit) || LIMIT;
+  return {
+    total: total || list.length,
+    totalPages: Math.max(1, Math.ceil((total || list.length) / (limit || 1)) || 1),
+  };
 }
 
 function daysRemainingClass(days: number | null): string {
@@ -58,8 +94,6 @@ function daysRemainingClass(days: number | null): string {
   if (days <= 15) return 'text-yellow-600';
   return 'text-green-600';
 }
-
-const LIMIT = 50;
 
 export default function DocumentAlertsPage() {
   const qc = useQueryClient();

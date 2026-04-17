@@ -19,10 +19,18 @@ export function extractAlertsList(body: unknown): unknown[] {
   if (Array.isArray(body)) return body;
   if (!body || typeof body !== 'object') return [];
   const o = body as Record<string, unknown>;
-  const inner = (o.data ?? o) as Record<string, unknown>;
-  if (Array.isArray(inner.data)) return inner.data;
-  if (Array.isArray(inner.alerts)) return inner.alerts;
+
+  // API returns { data: [...], total, page, limit }
+  if (Array.isArray(o.data)) return o.data;
   if (Array.isArray(o.alerts)) return o.alerts;
+
+  // Nested: { data: { data: [...] } }
+  if (o.data && typeof o.data === 'object' && !Array.isArray(o.data)) {
+    const inner = o.data as Record<string, unknown>;
+    if (Array.isArray(inner.data)) return inner.data;
+    if (Array.isArray(inner.alerts)) return inner.alerts;
+  }
+
   return [];
 }
 
