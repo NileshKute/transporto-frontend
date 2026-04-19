@@ -11,13 +11,20 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DailyTripLogPanel } from '@/components/trips/DailyTripLogPanel';
 import { formatCurrency, formatDate, safe, safeNumber } from '@/lib/utils';
-import { Plus, Search, CheckCircle, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, CheckCircle, Pencil, Trash2, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LocationSelect } from '@/components/common/LocationSelect';
 import { driverSelectLabel } from '@/lib/driverLabel';
 
-const STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const STATUSES = [
+  'SCHEDULED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'PENDING_VERIFICATION',
+  'REJECTED',
+];
 const EDIT_STATUSES = ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 
 const inputClass =
@@ -71,17 +78,78 @@ function tabButtonClass(active: boolean) {
   }`;
 }
 
+function pendingTabButtonClass(active: boolean) {
+  return `pb-3 px-1 text-sm font-['Barlow_Condensed'] uppercase tracking-wider border-b-2 transition-colors ${
+    active
+      ? 'border-amber-500 text-amber-700 font-bold'
+      : 'border-transparent text-[#64748b] hover:text-amber-900/75'
+  }`;
+}
+
+function parsePendingListResponse(body: unknown): { rows: Record<string, unknown>[]; total: number; totalPages: number } {
+  if (!body || typeof body !== 'object') return { rows: [], total: 0, totalPages: 1 };
+  const b = body as Record<string, unknown>;
+  const rows = Array.isArray(b.data)
+    ? (b.data as Record<string, unknown>[])
+    : Array.isArray((b as { trips?: unknown }).trips)
+      ? ((b as { trips: Record<string, unknown>[] }).trips)
+      : [];
+  const total = typeof b.total === 'number' ? b.total : rows.length;
+  const totalPages =
+    typeof b.totalPages === 'number' && b.totalPages > 0 ? b.totalPages : Math.max(1, Math.ceil(total / 20) || 1);
+  return { rows, total, totalPages };
+}
+
+function getTripSource(t: Record<string, unknown>): 'whatsapp' | 'app' | 'web' {
+  const keys = ['source', 'submittedVia', 'submissionSource', 'entrySource'] as const;
+  for (const k of keys) {
+    const v = String(t[k] ?? '').toLowerCase();
+    if (!v) continue;
+    if (v.includes('whatsapp')) return 'whatsapp';
+  }
+  for (const k of keys) {
+    const v = String(t[k] ?? '').toLowerCase();
+    if (v === 'web' || v.endsWith(' web')) return 'web';
+  }
+  for (const k of keys) {
+    const v = String(t[k] ?? '').toLowerCase();
+    if (v === 'app' || v.includes('mobile')) return 'app';
+  }
+  return 'web';
+}
+
+function SourceBadge({ source }: { source: 'whatsapp' | 'app' | 'web' }) {
+  const styles: Record<typeof source, string> = {
+    whatsapp: 'border-green-300 bg-green-100 text-green-900',
+    app: 'border-blue-200 bg-blue-100 text-blue-900',
+    web: 'border-slate-200 bg-slate-100 text-slate-800',
+  };
+  const labels: Record<typeof source, string> = { whatsapp: 'WhatsApp', app: 'App', web: 'Web' };
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide font-['Barlow_Condensed'] ${styles[source]}`}
+    >
+      {labels[source]}
+    </span>
+  );
+}
+
 function TripsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mainTab = searchParams.get('tab') === 'records' ? 'records' : 'daily';
+  const tabParam = searchParams.get('tab');
+  const mainTab: 'daily' | 'records' | 'pending' =
+    tabParam === 'records' ? 'records' : tabParam === 'pending' ? 'pending' : 'daily';
 
-  const setTab = (t: 'daily' | 'records') => {
-    router.replace(t === 'records' ? '/trips?tab=records' : '/trips', { scroll: false });
+  const setTab = (t: 'daily' | 'records' | 'pending') => {
+    const href =
+      t === 'records' ? '/trips?tab=records' : t === 'pending' ? '/trips?tab=pending' : '/trips';
+    router.replace(href, { scroll: false });
   };
 
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -91,6 +159,8 @@ function TripsPageInner() {
   const [editTrip, setEditTrip] = useState<Record<string, unknown> | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Record<string, unknown> | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<Record<string, unknown> | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data: vehicles } = useQuery({
     queryKey: ['vehicles-list'],
@@ -107,7 +177,19 @@ function TripsPageInner() {
       api
         .get('/trips', { params: { page, limit: 20, search: search || undefined, status: status || undefined } })
         .then((r) => r.data),
+    enabled: mainTab === 'records',
   });
+
+  const { data: pendingRaw, isLoading: pendingLoading } = useQuery({
+    queryKey: ['trips-pending', pendingPage],
+    queryFn: () => api.get('/trips/pending', { params: { page: pendingPage, limit: 20 } }).then((r) => r.data),
+    enabled: mainTab === 'pending',
+  });
+
+  const pendingParsed = parsePendingListResponse(pendingRaw);
+  const pendingRows = pendingParsed.rows;
+  const pendingTotal = pendingParsed.total;
+  const pendingTotalPages = pendingParsed.totalPages;
 
   const createMutation = useMutation({
     mutationFn: (payload: any) => api.post('/trips', payload),
@@ -156,6 +238,63 @@ function TripsPageInner() {
       setDeleteTarget(null);
     },
     onError: () => toast.error('Failed to delete trip'),
+  });
+
+  const invalidateTripsAndPending = () => {
+    qc.invalidateQueries({ queryKey: ['trips'] });
+    qc.invalidateQueries({ queryKey: ['trips-pending'] });
+    qc.invalidateQueries({ queryKey: ['trips-pending-count'] });
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
+      api.post(`/trips/${id}/approve`, notes != null && notes !== '' ? { notes } : {}),
+    onSuccess: () => {
+      invalidateTripsAndPending();
+      toast.success('Trip approved');
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null;
+      toast.error(typeof msg === 'string' ? msg : 'Failed to approve trip');
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/trips/${id}/reject`, { reason }),
+    onSuccess: () => {
+      invalidateTripsAndPending();
+      toast.success('Trip rejected');
+      setRejectTarget(null);
+      setRejectReason('');
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null;
+      toast.error(typeof msg === 'string' ? msg : 'Failed to reject trip');
+    },
+  });
+
+  const approveAllMutation = useMutation({
+    mutationFn: async () => {
+      const ids = pendingRows.map((t) => String(t.id ?? '')).filter(Boolean);
+      await Promise.all(ids.map((id) => api.post(`/trips/${id}/approve`, {})));
+    },
+    onSuccess: () => {
+      invalidateTripsAndPending();
+      toast.success('All visible trips approved');
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null;
+      toast.error(typeof msg === 'string' ? msg : 'Approve all failed');
+    },
   });
 
   const f = (name: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -241,18 +380,198 @@ function TripsPageInner() {
       </div>
 
       <div className="border-b border-[#E0E8F0]">
-        <nav className="flex gap-1 sm:gap-6" aria-label="Trips sections">
+        <nav className="flex flex-wrap gap-1 sm:gap-6" aria-label="Trips sections">
           <button type="button" onClick={() => setTab('daily')} className={tabButtonClass(mainTab === 'daily')}>
             Daily Log
           </button>
           <button type="button" onClick={() => setTab('records')} className={tabButtonClass(mainTab === 'records')}>
             Trip Records
           </button>
+          <button type="button" onClick={() => setTab('pending')} className={pendingTabButtonClass(mainTab === 'pending')}>
+            Pending Verification
+          </button>
         </nav>
       </div>
 
       {mainTab === 'daily' ? (
         <DailyTripLogPanel />
+      ) : mainTab === 'pending' ? (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-950 font-['Barlow_Condensed'] uppercase tracking-wide">
+                {pendingTotal} trips pending verification
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={approveAllMutation.isPending || pendingRows.length === 0}
+              onClick={() => approveAllMutation.mutate()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 font-['Barlow_Condensed'] uppercase tracking-wide"
+            >
+              <Check className="h-4 w-4" />
+              {approveAllMutation.isPending ? 'Approving…' : 'Approve All'}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm overflow-hidden">
+            {pendingLoading ? (
+              <LoadingSpinner />
+            ) : !pendingRows.length ? (
+              <EmptyState message="No trips pending verification" />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#F4F6F8] border-b border-[#E0E8F0]">
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Trip #</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Date</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Vehicle</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Driver</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Route</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Client</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Distance</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Bill</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Toll</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Source</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#1A4A7A]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E0E8F0]">
+                    {pendingRows.map((t) => {
+                      const row = t as Record<string, unknown>;
+                      const v = row.vehicle as { regNumber?: string } | undefined;
+                      const d = row.driver as { name?: string } | undefined;
+                      const src = getTripSource(row);
+                      return (
+                        <tr key={String(row.id ?? row.tripNumber)} className="hover:bg-[#F4F6F8] transition-colors">
+                          <td className="px-4 py-3.5 text-sm font-mono font-bold text-[#1565C0]">{safe(row.tripNumber)}</td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847]">{formatDate(row.date as string)}</td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">{safe(v?.regNumber)}</td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847]">{safe(d?.name)}</td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847] max-w-[160px]">
+                            <span className="truncate block">
+                              {typeof row.startLocation === 'string' ? row.startLocation : safe(row.startLocation)} →{' '}
+                              {typeof row.endLocation === 'string' ? row.endLocation || '…' : safe(row.endLocation)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847] max-w-[120px] truncate">{safe(row.clientName)}</td>
+                          <td className="px-4 py-3.5 text-sm text-[#0D2847] font-mono">
+                            {Number.isFinite(safeNumber(row.distanceKm, NaN)) ? `${safeNumber(row.distanceKm)} km` : '—'}
+                          </td>
+                          <td className="px-4 py-3.5 font-mono font-semibold text-emerald-600">
+                            {row.billAmount != null &&
+                            typeof row.billAmount !== 'object' &&
+                            Number.isFinite(safeNumber(row.billAmount, NaN))
+                              ? formatCurrency(safeNumber(row.billAmount, 0))
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3.5 font-mono text-[#0D2847]">
+                            {row.tollAmount != null &&
+                            typeof row.tollAmount !== 'object' &&
+                            Number.isFinite(safeNumber(row.tollAmount, NaN))
+                              ? formatCurrency(safeNumber(row.tollAmount, 0))
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <SourceBadge source={src} />
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                disabled={approveMutation.isPending || rejectMutation.isPending}
+                                onClick={() => row.id && approveMutation.mutate({ id: String(row.id) })}
+                                className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                                title="Approve"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={approveMutation.isPending || rejectMutation.isPending}
+                                onClick={() => {
+                                  setRejectTarget(row);
+                                  setRejectReason('');
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                                title="Reject"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {pendingRows.length > 0 && (
+              <Pagination
+                page={pendingPage}
+                totalPages={pendingTotalPages}
+                total={pendingTotal}
+                limit={20}
+                onPageChange={setPendingPage}
+              />
+            )}
+          </div>
+
+          <Modal
+            isOpen={!!rejectTarget}
+            onClose={() => {
+              setRejectTarget(null);
+              setRejectReason('');
+            }}
+            title="Reject trip"
+            size="sm"
+          >
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-[#7A9AB8] font-['Rajdhani']">
+                Trip{' '}
+                <span className="font-mono font-semibold text-[#0D2847]">{safe(rejectTarget?.tripNumber)}</span> — reason
+                is required. The driver will be notified.
+              </p>
+              <div>
+                <label className="block text-xs font-medium text-[#7A9AB8] mb-1.5 font-['Barlow_Condensed'] uppercase tracking-wider">
+                  Rejection reason *
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={4}
+                  className={`${inputClass} min-h-[96px]`}
+                  placeholder="Explain why this trip is rejected…"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRejectTarget(null);
+                    setRejectReason('');
+                  }}
+                  className="flex-1 py-2.5 text-sm font-medium text-[#0D2847] bg-white border border-[#E0E8F0] hover:bg-[#F4F6F8] rounded-lg font-['Barlow_Condensed'] uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={rejectMutation.isPending || !rejectReason.trim() || !rejectTarget?.id}
+                  onClick={() =>
+                    rejectTarget?.id &&
+                    rejectMutation.mutate({ id: String(rejectTarget.id), reason: rejectReason.trim() })
+                  }
+                  className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg font-['Barlow_Condensed'] uppercase tracking-wider"
+                >
+                  {rejectMutation.isPending ? 'Rejecting…' : 'Reject trip'}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        </>
       ) : (
         <>
           <div className="bg-white rounded-xl border border-[#E0E8F0] shadow-sm p-4 mb-5 flex flex-wrap gap-3">

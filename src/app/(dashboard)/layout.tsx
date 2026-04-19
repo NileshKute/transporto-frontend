@@ -9,6 +9,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { safe } from '@/lib/utils';
 import { documentExpiryApi } from '@/lib/api/document-expiry';
 import { getUnacknowledgedTotal } from '@/lib/document-expiry/summary';
+import api from '@/lib/api';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
 import {
   LayoutDashboard, Truck, Users, Route, Fuel, Wrench,
@@ -280,6 +281,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
   const docAlertBadge = getUnacknowledgedTotal(docExpirySummary);
 
+  const { data: tripsPendingVerificationCount = 0 } = useQuery({
+    queryKey: ['trips-pending-count'],
+    queryFn: async () => {
+      try {
+        const r = await api.get('/trips/pending', { params: { page: 1, limit: 1 } });
+        const body = r.data as { total?: number; meta?: { total?: number } };
+        if (typeof body?.total === 'number') return body.total;
+        if (typeof body?.meta?.total === 'number') return body.meta.total;
+        return 0;
+      } catch {
+        return 0;
+      }
+    },
+    staleTime: 30_000,
+  });
+
   const userDisplayName = useMemo(() => {
     const n = safe(user?.name);
     return n === '—' ? 'User' : n;
@@ -378,6 +395,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         {item.href === '/document-alerts' && docAlertBadge > 0 && (
                           <span className="flex-shrink-0 min-w-[1.25rem] h-5 px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center font-['Rajdhani']">
                             {docAlertBadge > 99 ? '99+' : docAlertBadge}
+                          </span>
+                        )}
+                        {item.href === '/trips' && tripsPendingVerificationCount > 0 && (
+                          <span className="flex-shrink-0 min-w-[1.25rem] h-5 px-1 rounded-full bg-amber-500 text-[#0D2847] text-[10px] font-bold flex items-center justify-center font-['Rajdhani']">
+                            {tripsPendingVerificationCount > 99 ? '99+' : tripsPendingVerificationCount}
                           </span>
                         )}
                       </span>
