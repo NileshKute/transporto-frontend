@@ -102,7 +102,8 @@ export function normalizeQuotationRow(raw: unknown): QuotationListItem | null {
   };
 }
 
-export function normalizeQuotationsList(data: unknown): QuotationListItem[] {
+/** Raw rows from `GET /quotations` (and similar) list payloads. */
+export function extractQuotationsArrayFromPayload(data: unknown): Record<string, unknown>[] {
   let arr: unknown[] = [];
   if (Array.isArray(data)) arr = data;
   else if (data && typeof data === 'object') {
@@ -111,7 +112,17 @@ export function normalizeQuotationsList(data: unknown): QuotationListItem[] {
     else if (Array.isArray(o.quotations)) arr = o.quotations;
     else if (Array.isArray(o.items)) arr = o.items;
   }
-  return arr.map(normalizeQuotationRow).filter((x): x is QuotationListItem => x != null);
+  return arr.filter((x): x is Record<string, unknown> => x != null && typeof x === 'object');
+}
+
+/** API omitted monthly rate (distinct from normalized numeric 0). */
+export function isMonthlyRateMissingRaw(r: Record<string, unknown>): boolean {
+  const v = r.monthlyRate ?? r.monthly_rate;
+  return v == null || v === '';
+}
+
+export function normalizeQuotationsList(data: unknown): QuotationListItem[] {
+  return extractQuotationsArrayFromPayload(data).map(normalizeQuotationRow).filter((x): x is QuotationListItem => x != null);
 }
 
 export function listMetaTotal(data: unknown, itemsLen: number): number {

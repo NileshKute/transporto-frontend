@@ -12,6 +12,8 @@ import { StatCard } from '@/components/ui/StatCard';
 import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { displayText, toArray } from '@/lib/displayText';
 import {
+  extractQuotationsArrayFromPayload,
+  isMonthlyRateMissingRaw,
   normalizeQuotationsList,
   type QuotationListItem,
 } from '@/lib/quotations/normalize';
@@ -30,6 +32,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/context/AuthContext';
 
 function formatQuoteListDate(
   quoteDate: string | undefined,
@@ -91,7 +94,12 @@ function vehicleLabel(type: string, other?: string): string {
   return o?.label ?? type.replace(/_/g, ' ');
 }
 
+function isAdmin(role: string | undefined) {
+  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+}
+
 export default function QuotationsPage() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -125,6 +133,10 @@ export default function QuotationsPage() {
   });
 
   const items = useMemo(() => normalizeQuotationsList(listPayload), [listPayload]);
+
+  const missingRateCount = useMemo(() => {
+    return extractQuotationsArrayFromPayload(listPayload).filter(isMonthlyRateMissingRaw).length;
+  }, [listPayload]);
 
   const { data: clientsRaw = [] } = useQuery({
     queryKey: ['clients'],
@@ -271,6 +283,14 @@ export default function QuotationsPage() {
           >
             Import
           </Link>
+          {isAdmin(user?.role) && (
+            <Link
+              href="/quotations/admin/missing-rates"
+              className="inline-flex items-center justify-center gap-2 border-2 border-amber-500 text-amber-800 hover:bg-amber-50 font-['Barlow_Condensed'] font-semibold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-colors"
+            >
+              Fix missing rates{missingRateCount > 0 ? ` (${missingRateCount})` : ''}
+            </Link>
+          )}
         </div>
       </div>
 

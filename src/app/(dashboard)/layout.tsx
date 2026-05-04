@@ -96,6 +96,7 @@ function getPageTitle(pathname: string | null) {
     if (p === '/quotations') return 'Quotations';
     if (p === '/quotations/new') return 'New Quotation';
     if (p === '/quotations/import') return 'Import Quotations';
+    if (p === '/quotations/admin/missing-rates') return 'Missing rates';
     if (p.endsWith('/edit')) return 'Edit Quotation';
     return 'Quotation';
   }
@@ -125,6 +126,7 @@ function getPageTitle(pathname: string | null) {
     '/quotations': 'Quotations',
     '/quotations/new': 'New Quotation',
     '/quotations/import': 'Import Quotations',
+    '/quotations/admin/missing-rates': 'Missing rates',
   };
   return map[p] || 'Dashboard';
 }
@@ -150,6 +152,7 @@ function buildBreadcrumbItems(pathname: string | null, pageTitle: string): Bread
     items.push({ label: 'Quotations', href: '/quotations' });
     if (p === '/quotations/new') items.push({ label: 'New' });
     else if (p === '/quotations/import') items.push({ label: 'Import' });
+    else if (p === '/quotations/admin/missing-rates') items.push({ label: 'Missing rates' });
     else if (p.endsWith('/edit')) items.push({ label: 'Edit' });
     else if (p !== '/quotations') items.push({ label: 'Detail' });
     return items;
