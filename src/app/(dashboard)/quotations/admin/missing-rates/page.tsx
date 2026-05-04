@@ -226,8 +226,8 @@ export default function MissingRatesAdminPage() {
           <h1 className="font-['Oswald'] text-xl font-bold text-[#0D2847] tracking-wide uppercase">Missing monthly rates</h1>
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 p-8 text-center space-y-3 shadow-sm">
-          <p className="text-3xl" aria-hidden>
-            ✓
+          <p className="text-3xl mb-1" aria-hidden>
+            🎉
           </p>
           <p className="font-['Oswald'] text-lg text-emerald-900">All quotations have monthly rates</p>
           <p className="font-['Rajdhani'] text-sm text-emerald-800/90">Nothing left to fix here.</p>
