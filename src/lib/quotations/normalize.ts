@@ -28,6 +28,48 @@ function readNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Raw value → ISO-like string if it represents a valid date (for `quoteDate` extraction). */
+function coalesceQuoteDateValue(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  if (v instanceof Date) {
+    return Number.isNaN(v.getTime()) ? undefined : v.toISOString();
+  }
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  if (typeof v === 'string') {
+    const t = v.trim();
+    if (!t || t === 'null' || t === 'undefined') return undefined;
+    return t;
+  }
+  return undefined;
+}
+
+/**
+ * Business quotation date from API row (Word / DB). Tries several keys used by imports and Prisma.
+ * Returns '' if none parse — UI should fall back to `createdAt`.
+ */
+export function readQuoteDateFromRecord(r: Record<string, unknown>): string {
+  const keys = [
+    'quoteDate',
+    'quote_date',
+    'quotationDate',
+    'quotation_date',
+    'docQuoteDate',
+    'documentQuoteDate',
+    'issueDate',
+    'issue_date',
+  ] as const;
+  for (const k of keys) {
+    const s = coalesceQuoteDateValue(r[k]);
+    if (!s) continue;
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return s;
+  }
+  return '';
+}
+
 export function normalizeQuotationRow(raw: unknown): QuotationListItem | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
@@ -42,7 +84,7 @@ export function normalizeQuotationRow(raw: unknown): QuotationListItem | null {
   return {
     id,
     quoteNumber: displayText(r.quoteNumber ?? r.quote_number ?? r.number, ''),
-    quoteDate: String(r.quoteDate ?? r.quote_date ?? ''),
+    quoteDate: readQuoteDateFromRecord(r),
     validUntil: r.validUntil != null || r.valid_until != null ? String(r.validUntil ?? r.valid_until) : undefined,
     clientId: String(r.clientId ?? r.client_id ?? ''),
     client,

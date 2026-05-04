@@ -14,7 +14,7 @@ import {
   DEFAULT_QUOTATION_TERMS,
   VEHICLE_QUOTE_TYPE_OPTIONS,
 } from '@/lib/quotations/constants';
-import { pickQuotationPayload, readStringArray } from '@/lib/quotations/normalize';
+import { pickQuotationPayload, readQuoteDateFromRecord, readStringArray } from '@/lib/quotations/normalize';
 import { ArrowLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -134,7 +134,9 @@ export default function QuotationForm({ quotationId }: { quotationId?: string })
     }
     setAttnPerson(displayText(q.attnPerson ?? q.attn_person, ''));
     setSubject(displayText(q.subject, DEFAULT_QUOTATION_SUBJECT));
-    setQuoteDate(sliceDate(String(q.quoteDate ?? q.quote_date ?? new Date().toISOString())));
+    const docQuote = readQuoteDateFromRecord(q);
+    const created = q.createdAt ?? q.created_at;
+    setQuoteDate(sliceDate(String(docQuote || created || new Date().toISOString())));
     setValidityDays(Number(q.validityDays ?? q.validity_days ?? 30) || 30);
     const vt = displayText(q.vehicleType ?? q.vehicle_type, 'REEFER_VAN');
     setVehicleType(vt || 'REEFER_VAN');

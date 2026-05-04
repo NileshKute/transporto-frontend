@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Pagination } from '@/components/ui/Pagination';
 import { StatCard } from '@/components/ui/StatCard';
-import { formatIndianCurrency } from '@/lib/utils';
+import { formatIndianCurrency, formatDate } from '@/lib/utils';
 import { displayText, toArray } from '@/lib/displayText';
 import {
   normalizeQuotationsList,
@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { format } from 'date-fns';
 
 function formatQuoteListDate(
   quoteDate: string | undefined,
@@ -39,13 +38,13 @@ function formatQuoteListDate(
   if (quoteDate?.trim()) {
     const d = new Date(quoteDate);
     if (!Number.isNaN(d.getTime())) {
-      return { text: format(d, 'dd MMM yyyy'), isEstimated: false };
+      return { text: formatDate(d), isEstimated: false };
     }
   }
   if (createdAt?.trim()) {
     const d = new Date(createdAt);
     if (!Number.isNaN(d.getTime())) {
-      return { text: format(d, 'dd MMM yyyy'), isEstimated: true };
+      return { text: formatDate(d), isEstimated: true };
     }
   }
   return { text: '—', isEstimated: false };
@@ -74,10 +73,15 @@ function normalizeClientOpt(raw: unknown): ClientOpt | null {
   return { id, name: displayText(r.name, 'Client') };
 }
 
-function safeQuoteDate(iso: string): Date | null {
+function safeQuoteDate(iso: string | undefined): Date | null {
   if (!iso || typeof iso !== 'string') return null;
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Sort / filter by business quote date, then record creation date. */
+function effectiveQuotationDate(q: QuotationListItem): Date | null {
+  return safeQuoteDate(q.quoteDate) ?? safeQuoteDate(q.createdAt);
 }
 
 function vehicleLabel(type: string, other?: string): string {
@@ -147,7 +151,7 @@ export default function QuotationsPage() {
     if (dateFrom) {
       const from = new Date(dateFrom);
       list = list.filter((q) => {
-        const d = safeQuoteDate(q.quoteDate);
+        const d = effectiveQuotationDate(q);
         return d != null && d >= from;
       });
     }
@@ -155,10 +159,15 @@ export default function QuotationsPage() {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
       list = list.filter((q) => {
-        const d = safeQuoteDate(q.quoteDate);
+        const d = effectiveQuotationDate(q);
         return d != null && d <= to;
       });
     }
+    list.sort((a, b) => {
+      const ta = effectiveQuotationDate(a)?.getTime() ?? 0;
+      const tb = effectiveQuotationDate(b)?.getTime() ?? 0;
+      return tb - ta;
+    });
     return list;
   }, [items, statusFilter, clientFilter, vehicleTypeFilter, dateFrom, dateTo, clients]);
 
@@ -192,7 +201,7 @@ export default function QuotationsPage() {
     let converted = 0;
     items.forEach((row) => {
       totalValue += row.monthlyRate || 0;
-      const d = safeQuoteDate(row.quoteDate);
+      const d = effectiveQuotationDate(row);
       if (d && d.getMonth() === m && d.getFullYear() === y) thisMonth += 1;
       if (row.status === 'CONVERTED_TO_INVOICE') converted += 1;
     });

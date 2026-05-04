@@ -8,9 +8,8 @@ import { quotationsApi } from '@/lib/api/quotations';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatIndianCurrency, formatDate } from '@/lib/utils';
-import { format } from 'date-fns';
 import { displayText, toArray } from '@/lib/displayText';
-import { pickQuotationPayload, readStringArray } from '@/lib/quotations/normalize';
+import { pickQuotationPayload, readQuoteDateFromRecord, readStringArray } from '@/lib/quotations/normalize';
 import { QUOTATION_STATUSES, STATUS_BADGE_CLASSES, VEHICLE_QUOTE_TYPE_OPTIONS } from '@/lib/quotations/constants';
 import { ArrowLeft, Download, Pencil, FileOutput, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,20 +29,20 @@ function readNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Prefer quoteDate; fall back to createdAt for legacy imports (show ~ in UI). */
+/** Prefer business `quoteDate`; fall back to `createdAt` when missing (show ~ in UI). */
 function formatDetailQuoteDate(q: Record<string, unknown>): { text: string; isEstimated: boolean } {
-  const quoteDate = String(q.quoteDate ?? q.quote_date ?? '').trim();
+  const quoteIso = readQuoteDateFromRecord(q);
   const createdAt = String(q.createdAt ?? q.created_at ?? '').trim();
-  if (quoteDate) {
-    const d = new Date(quoteDate);
+  if (quoteIso) {
+    const d = new Date(quoteIso);
     if (!Number.isNaN(d.getTime())) {
-      return { text: format(d, 'dd MMM yyyy'), isEstimated: false };
+      return { text: formatDate(d), isEstimated: false };
     }
   }
   if (createdAt) {
     const d = new Date(createdAt);
     if (!Number.isNaN(d.getTime())) {
-      return { text: format(d, 'dd MMM yyyy'), isEstimated: true };
+      return { text: formatDate(d), isEstimated: true };
     }
   }
   return { text: '—', isEstimated: false };
